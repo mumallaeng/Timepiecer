@@ -1,0 +1,21 @@
+# Verilog / HDL build and simulation artifacts
+*.vvp
+*.vcd
+*.fst
+*.wlf
+*.vpd
+
+# Verilator
+obj_dir/
+
+# Synopsys VCS
+csrc/
+simv
+simv.daidir/
+DVEfiles/
+ucli.key
+
+# Questa / ModelSim
+transcript
+work/
+modelsim.ini
