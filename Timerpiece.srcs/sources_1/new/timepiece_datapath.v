@@ -8,7 +8,8 @@ module timepiece_datapath #(
     parameter integer MSEC_WIDTH = 7,
     parameter integer SEC_WIDTH  = 6,
     parameter integer MIN_WIDTH  = 6,
-    parameter integer HOUR_WIDTH = 5
+    parameter integer HOUR_WIDTH = 5,
+    parameter integer INIT_HOUR  = 12
 ) (
     input clk,
     input rst,
@@ -47,6 +48,7 @@ module timepiece_datapath #(
     wire w_apply_set_time;
     wire [23:0] w_live_time;
     wire [23:0] w_set_time;
+    wire [23:0] w_set_time_load;
 
     reg set_mode_d_reg;
 
@@ -56,6 +58,7 @@ module timepiece_datapath #(
 
     // 실시간 시계값을 외부로 내보내는 24비트 버스
     // [6:0]=msec, [12:7]=sec, [18:13]=min, [23:19]=hour 순서로 묶음.
+    // 현재는 내부 실제 시간을 24시간제 값 그대로 유지함.
     assign w_live_time       = {hour, min, sec, msec};
     assign o_timepiece_vault = w_live_time;
 
@@ -83,7 +86,8 @@ module timepiece_datapath #(
         .MSEC_TIMES(MSEC_TIMES),
         .SEC_TIMES(SEC_TIMES),
         .MIN_TIMES(MIN_TIMES),
-        .HOUR_TIMES(HOUR_TIMES)
+        .HOUR_TIMES(HOUR_TIMES),
+        .INIT_HOUR(INIT_HOUR)
     ) U_TIME_SET_MODULE (
         .clk(clk),
         .rst(rst),
@@ -94,8 +98,10 @@ module timepiece_datapath #(
         .i_increment_tens(i_increment_tens),
         .i_decrement(i_decrement),
         .i_decrement_tens(i_decrement_tens),
+        .i_time_24(i_time_24),
         .i_live_time(w_live_time),
-        .o_set_time(w_set_time)
+        .o_set_time(w_set_time),
+        .o_set_time_load(w_set_time_load)
     );
 
     tick_gen_100hz U_TICK_GEN_100HZ (
@@ -106,52 +112,56 @@ module timepiece_datapath #(
 
     tick_counter #(
         .TIMES(MSEC_TIMES),
-        .BIT_WIDTH(MSEC_WIDTH)
+        .BIT_WIDTH(MSEC_WIDTH),
+        .INIT_VALUE(0)
     ) U_MSEC_COUNTER (
         .clk(clk),
         .rst(rst),
         .i_tick(w_tick_100hz),
         .i_load(w_apply_set_time),
-        .i_time(w_set_time[MSEC_MSB:MSEC_LSB]),
+        .i_time(w_set_time_load[MSEC_MSB:MSEC_LSB]),
         .o_time(msec),
         .o_tick(w_sec_tick)
     );
 
     tick_counter #(
         .TIMES(SEC_TIMES),
-        .BIT_WIDTH(SEC_WIDTH)
+        .BIT_WIDTH(SEC_WIDTH),
+        .INIT_VALUE(0)
     ) U_SEC_COUNTER (
         .clk(clk),
         .rst(rst),
         .i_tick(w_sec_tick),
         .i_load(w_apply_set_time),
-        .i_time(w_set_time[SEC_MSB:SEC_LSB]),
+        .i_time(w_set_time_load[SEC_MSB:SEC_LSB]),
         .o_time(sec),
         .o_tick(w_min_tick)
     );
 
     tick_counter #(
         .TIMES(MIN_TIMES),
-        .BIT_WIDTH(MIN_WIDTH)
+        .BIT_WIDTH(MIN_WIDTH),
+        .INIT_VALUE(0)
     ) U_MIN_COUNTER (
         .clk(clk),
         .rst(rst),
         .i_tick(w_min_tick),
         .i_load(w_apply_set_time),
-        .i_time(w_set_time[MIN_MSB:MIN_LSB]),
+        .i_time(w_set_time_load[MIN_MSB:MIN_LSB]),
         .o_time(min),
         .o_tick(w_hour_tick)
     );
 
     tick_counter #(
         .TIMES(HOUR_TIMES),
-        .BIT_WIDTH(HOUR_WIDTH)
+        .BIT_WIDTH(HOUR_WIDTH),
+        .INIT_VALUE(INIT_HOUR)
     ) U_HOUR_COUNTER (
         .clk(clk),
         .rst(rst),
         .i_tick(w_hour_tick),
         .i_load(w_apply_set_time),
-        .i_time(w_set_time[HOUR_MSB:HOUR_LSB]),
+        .i_time(w_set_time_load[HOUR_MSB:HOUR_LSB]),
         .o_time(hour),
         .o_tick()
     );
@@ -159,7 +169,8 @@ endmodule
 
 module tick_counter #(
     parameter integer TIMES = 100,
-    parameter integer BIT_WIDTH = 7
+    parameter integer BIT_WIDTH = 7,
+    parameter integer INIT_VALUE = 0
 ) (
     input clk,
     input rst,
@@ -177,7 +188,7 @@ module tick_counter #(
 
     always @(posedge clk or posedge rst) begin
         if (rst) begin  // reset이면 시간 초기화
-            time_reg <= 0;
+            time_reg <= INIT_VALUE[BIT_WIDTH-1:0];
         end else begin  // 평소에는 시간 업데이트
             time_reg <= time_next;
         end

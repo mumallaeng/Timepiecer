@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module top_stopwatch_watch (
+module timerpiece (
     input clk,
     input rst,
     input btnR,

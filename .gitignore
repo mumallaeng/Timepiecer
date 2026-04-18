@@ -49,7 +49,6 @@ usage_statistics_webtalk.*
 
 # Common simulation waveforms and debug databases
 *.wdb
-*.wcfg
 *.vcd
 *.fst
 *.lxt
