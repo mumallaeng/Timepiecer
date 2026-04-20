@@ -2,89 +2,86 @@
 
 ## 문서 목적
 
-이 문서는 실제 툴이 생성하는 `RTL Schematic`을 보기 전에, 설계자가 예상하는 `RTL 구조`를 미리 정리하기 위한 문서이다.
+이 문서는 현재 `main` 소스 기준으로 RTL이 어떻게 보여야 하는지 정리하는 문서임.
 
-즉, 이 문서는 구현 결과물이 아니라 `예상 회로도 설명서`에 해당한다.
+즉 "앞으로 이상적으로 이렇게 될 것"만 적는 문서가 아니라,
 
-## 문서 위치
+- 현재 구현된 Timer 구조
+- 곧 채워질 Timepiece 구조
 
-이 문서는 `State Diagram` 다음, `Verilog 구현 가이드` 이전에 둔다.
+를 함께 보는 문서임.
 
-그 이유는 다음과 같다.
+## 현재 구현 기준 상위 RTL 구조
 
-- 상태 정의가 끝나야 어떤 레지스터와 제어 경로가 필요한지 보인다.
-- 코드 구현 전에 예상 구조를 정리해야 실제 RTL schematic과 비교하기 쉽다.
+현재 소스를 기준으로 예상되는 상위 구조는 아래와 같음.
 
-## 예상 상위 RTL 구조
+- `debouncer`
+- `input_conditioning`
+- `common_control`
+- `timer_fsm`
+- `timer_datapath`
+- `timer_unit`
+- `timepiece_fsm`
+- `timepiece_datapath`
+- `time_set_module`
+- `display_select`
+- `fnd_controller`
 
-예상 RTL 구조는 아래처럼 해석한다.
+## 현재 구현된 Timer 쪽 예상 RTL
 
-- `Input Conditioning`
-- `Common Control Logic`
-- `Timepiece FSM`
-- `Timer FSM`
-- `Timepiece Datapath`
-- `Timer Datapath`
-- `Display Select Logic`
-- `FND Controller`
+Timer 쪽은 실제로 아래 구조가 잡혀 있어야 함.
 
-즉, 블록 다이어그램보다 한 단계 더 내려와서, FSM과 Datapath가 실제 레지스터/선택 경로 관점에서 어떻게 연결될지를 예상하는 문서다.
+1. `input_conditioning` 안에 버튼별 `debouncer` 인스턴스 존재
+2. `timer_fsm` 안에
+   - `current_state`
+   - `next_state`
+   - `previous_state`
+   - `updown_state`
+   레지스터 존재
+3. `timer_datapath` 안에
+   - `tick_gen_100hz`
+   - `tick_counter` 4개
+   가 `msec -> sec -> min -> hour` 체인으로 존재
+4. `timer_unit`이 `timer_fsm + timer_datapath`를 래핑함
 
-## 예상 레지스터와 제어 경로
+즉 Timer 쪽은 이미 "제어 + 데이터 경로 분리"가 구현된 상태로 기대하면 됨.
 
-| 구분 | 예상 항목 | 역할 |
-| --- | --- | --- |
-| FSM 상태 레지스터 | `timepiece_state`, `timer_state` | 각 FSM의 현재 상태 저장 |
-| 저장 레지스터 | `hour_format`, `display_mode`, `position_shift`, `count_updown` | 모드와 선택값 유지 |
-| 데이터 레지스터 | `timepiece_value`, `timer_value` | 실제 시각/타이머 값 저장 |
-| duration detect 경로 | `btnR_hold_2s`, `btnU_hold_1p5s`, `btnD_hold_1p5s` | hold 입력을 short 입력과 구분해 FSM으로 전달 |
-| 제어 경로 | `edit_action`, `shift_request`, `clear_request`, `run_toggle_request` | 버튼 입력을 Datapath 동작으로 연결 |
-| 선택 경로 | `display_select` 계열 | 현재 표시할 값 선택 |
+## Timepiece 쪽 예상 RTL
 
-## Timepiece 쪽 예상 RTL 해석
+Timepiece 쪽은 Timer 구조를 그대로 따라가면 됨.
 
-Timepiece 쪽은 아래 흐름으로 예상한다.
+예상 구조:
 
-1. `timepiece_state`가 현재 상태를 저장
-2. `btnR_hold_2s`가 `VIEW ↔ SET` 진입 조건으로 사용
-3. `position_shift`가 어느 시간 단위를 수정할지 저장
-4. `btnU/btnD`의 short/hold 구분이 `edit_action`에 반영
-5. `timepiece_value`가 선택 단위와 ones/tens 제어 기준으로 갱신
+1. `timepiece_fsm`이 상태를 가짐
+2. `timepiece_datapath`가 실시간 시계값을 가짐
+3. `time_set_module`이 설정 버스를 관리함
+4. `timepiece_datapath` 안에
+   - `tick_gen_100hz`
+   - `tick_counter` 4개
+   - `time_set_module`
+   가 연결됨
 
-즉 `SET` 상태와 `INDEX_SHIFT`, `INCREMENT_ONES`, `INCREMENT_TENS`, `DECREMENT_ONES`, `DECREMENT_TENS` 상태가 Timepiece Datapath를 제어하는 구조를 예상한다.
+즉 Timepiece 쪽은 "Timer 구조의 대칭 복제 + setting 경로 추가"로 이해하면 됨.
 
-## Timer 쪽 예상 RTL 해석
+## 현재 구현에서 바로 볼 수 있는 저장값
 
-Timer 쪽은 아래 흐름으로 예상한다.
+| 구분 | 현재 기준 |
+| --- | --- |
+| Timer 상태 레지스터 | `current_state`, `next_state`, `previous_state` |
+| Timer 방향 저장 | `updown_state` |
+| 공통 표시 저장 | `o_display_mode` |
+| Timepiece 설정 버스 | `o_set_time` |
+| Timepiece 실시간 버스 | `o_timepiece_vault` |
 
-1. `timer_state`가 현재 상태를 저장
-2. `count_updown`이 카운트 방향을 저장
-3. 내부 tick이 들어오면 `RUN` 상태에서만 `timer_value`를 갱신
-4. `COUNT_CLEAR` 상태에서는 `timer_value`를 초기화
+## 구조 해석 메모
 
-즉 `STOP`, `RUN`, `COUNT_UPDOWN`, `COUNT_CLEAR` 상태가 Timer Datapath를 제어하는 구조를 예상한다.
+- `common_control`은 현재 `display_mode` 쪽 저장값만 담당함
+- `display_select`는 `SW0`, `SW15`를 받아 표시 대상을 선택함
+- `top_stopwatch_watch`는 아직 최종 top이 아니므로, RTL 기대 구조는 개별 모듈 기준으로 보는 것이 더 정확함
 
-## Timepiece 편집 경로에서 예상할 것
+즉 RTL schematic에서 가장 먼저 확인할 것은
 
-Timepiece 편집 경로는 기존 한 자리수 편집보다 조금 더 구체적으로 보일 가능성이 크다.
+- Timer 경로가 의도대로 분리되어 있는가
+- Timepiece 경로가 Timer와 같은 패턴으로 올라가고 있는가
 
-- `position_shift`는 `SHIFT_MSEC`, `SHIFT_SEC`, `SHIFT_MIN`, `SHIFT_HOUR` 중 하나를 저장한다.
-- `edit_action`은 `EDIT_INC_ONES`, `EDIT_INC_TENS`, `EDIT_DEC_ONES`, `EDIT_DEC_TENS`처럼 short/hold 구분이 들어간다.
-- Datapath 안에는 현재 선택 단위의 `ones` 또는 `tens` 위치를 계산하는 선택 경로가 추가될 수 있다.
-- `BtnL` 입력은 `INDEX_SHIFT` 상태를 통해 단위 선택 레지스터만 바꾸고, 실제 값 변경은 하지 않는다.
-
-## 예상 구조에서 확인할 포인트
-
-예상 RTL 구조를 그릴 때는 아래를 확인한다.
-
-- FSM 상태 레지스터와 Datapath 레지스터가 분리되어 있는가
-- `Timepiece FSM`과 `Timer FSM`이 독립적으로 보이는가
-- `Common Control Logic`이 공통 입력만 담당하는가
-- `Display Select Logic`이 출력 선택만 담당하는가
-- `FND Controller`가 출력 드라이버 역할만 하는가
-
-## 다음 단계와의 연결
-
-이 문서 다음에는 `07-verilog-implementation-guide.md`에서 실제 RTL 코드 작성 기준을 정리한다.
-
-그 뒤에는 `08-rtl-schematic-check.md`에서 실제 툴이 만든 RTL schematic에서 무엇을 확인할지 정리한다.
+임.

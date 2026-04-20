@@ -2,74 +2,93 @@
 
 ## 문서 목적
 
-이 문서는 `Requirement`와 `Function Spec` 사이에서, 시스템이 어떤 블록으로 나뉘는지를 설명하기 위한 문서이다.
+이 문서는 현재 `main`에 구현된 블록 구조를 기준으로, 앞으로 `Timepiece`를 어디에 끼워 넣어야 하는지 설명하기 위한 문서임.
 
-현재 `Block Diagram`은 이미 작성이 완료된 상태이므로, 이 문서는 그 다이어그램이 무엇을 의미하는지 텍스트 기준으로 고정하는 역할을 한다.
+즉 단순 이상 구조가 아니라, "현재 구현 + 앞으로 채울 자리"를 함께 보여주는 문서로 봐야 함.
 
-## 상위 구조
+## 현재 main 기준 상위 구조
 
-`Watch Project`는 아래 블록으로 나누어 해석한다.
+현재 코드 기준으로 해석하면 상위 구조는 아래처럼 보는 것이 가장 자연스러움.
 
 - `Input Conditioning`
-- `Common Control Logic`
+- `Common Control`
+- `Timer Unit`
 - `Timepiece FSM`
-- `Timer FSM`
 - `Timepiece Datapath`
-- `Timer Datapath`
-- `Display Select Logic`
+- `Display Select`
 - `FND Controller`
+- `Top`
 
-핵심 원리는 제어부를 하나의 큰 FSM으로 합치지 않고, `공통 제어 로직`, `Timepiece FSM`, `Timer FSM`으로 분리하는 데 있다.
+여기서 실제로 이미 동작하는 중심 축은 `Timer Unit` 쪽임.
 
-- `공통 제어 로직`은 모드 선택과 공통 입력을 처리한다.
-- `Timepiece FSM`은 시계 기능 상태만 담당한다.
-- `Timer FSM`은 타이머 기능 상태만 담당한다.
-- 각 `Datapath`는 실제 값을 저장하고 갱신한다.
-- 마지막으로 `Display Select Logic`과 `FND Controller`가 화면 출력을 담당한다.
+## 현재 구현된 블록 기준 설명
 
-## 블록별 역할
-
-| 블록 | 역할 | 주요 입력 | 주요 출력 |
+| 블록 | 현재 구현 모듈 | 역할 | 상태 |
 | --- | --- | --- | --- |
-| `Input Conditioning` | 스위치와 버튼 입력을 안정화하고 short/hold 이벤트로 정리한다. | `SW`, `Btn`, `clk`, `rst` | clean level, clean tick, `btnR_hold_2s`, `btnU_hold_1p5s`, `btnD_hold_1p5s` |
-| `Common Control Logic` | 모드 선택과 공통 입력을 처리하고, 어느 FSM 결과를 활성화할지 결정한다. | `SW0`, `SW15`, `BtnC`, `BtnR short`, clean tick | 공통 제어 신호, reset, display control |
-| `Timepiece FSM` | 시계 기능에 대한 상태 전이와 이벤트 처리를 담당한다. | clean tick, `BtnR hold 2s`, `BtnL`, `BtnU short`, `BtnU hold 1.5s`, `BtnD short`, `BtnD hold 1.5s`, current state | `timepiece_state_next`, `edit_action`, `shift_request` |
-| `Timer FSM` | 타이머 기능에 대한 상태 전이와 이벤트 처리를 담당한다. | clean tick, `BtnL`, `BtnU`, `BtnD`, current state | `timer_state_next`, `run_toggle_request`, `clear_request`, `direction_toggle_request` |
-| `Timepiece Datapath` | 현재 시각과 편집 중인 시각 값을 관리한다. | `clk`, `rst`, `edit_action`, `position_shift` | `timepiece_value` |
-| `Timer Datapath` | 타이머 값과 카운트 방향을 관리한다. | `clk`, `rst`, `count_updown`, `run/clear request` | `timer_value` |
-| `Display Select Logic` | 현재 모드와 표시 형식에 따라 어느 값을 FND에 보낼지 결정한다. | `sw0`, `display_mode`, `timepiece_value`, `timer_value` | display value |
-| `FND Controller` | 선택된 값을 4자리 7-segment 출력으로 변환한다. | display value, `clk`, `rst` | `fnd_com`, `fnd_data` |
+| 입력 정제 | `debouncer`, `input_conditioning` | 버튼을 1회 이벤트와 hold 이벤트로 정리함 | 구현됨 |
+| 공통 표시 제어 | `common_control` | display 관련 공통 제어를 담당함 | 구현됨 |
+| Timer 제어+데이터 | `timer_unit` = `timer_fsm + timer_datapath` | Timer 기능 전체를 묶음 | 구현됨 |
+| Timepiece 제어 | `timepiece_fsm` | Timepiece 상태 전이 담당 | 스텁 |
+| Timepiece 데이터 | `timepiece_datapath`, `time_set_module` | 실시간 시계와 설정 버스 담당 | 구현 중 |
+| 표시 선택 | `display_select` | `Timepiece/Timer`, `12h/24h` 선택 | 구현됨 |
+| 표시 출력 | `fnd_controller` | 4자리 FND 표시 | import 사용 |
 
-## 블록 다이어그램 해석 기준
+## 현재 구현 흐름
 
-블록 다이어그램에서는 아래 내용을 분명히 드러내는 것이 좋다.
+현재 `main` 구현을 기준으로 보면 데이터 흐름은 아래처럼 읽으면 됨.
 
-- `Input Conditioning`과 원시 버튼 입력을 분리할 것
-- `Common Control Logic`, `Timepiece FSM`, `Timer FSM`을 분리할 것
-- `Timepiece Datapath`와 `Timer Datapath`를 별도 블록으로 둘 것
-- `Display Select Logic`이 두 Datapath의 출력을 선택한다는 점을 표시할 것
-- `FND Controller`는 출력 전용 블록으로 마지막 단계에 둘 것
+1. `btnU`, `btnD`, `btnL`, `btnR` 입력이 들어옴
+2. `input_conditioning`이 short/hold 이벤트를 만듦
+3. `timer_unit`은 `timer_fsm`과 `timer_datapath`를 묶어서 Timer 값을 만듦
+4. `display_select`가 Timer 값 또는 Timepiece 값을 고름
+5. `fnd_controller`가 선택된 값을 FND에 표시함
 
-## 제어부 분리 기준
+즉 `Timepiece` 구현은 아래 두 블록을 같은 레벨로 채우는 작업으로 보면 됨.
 
-제어부는 아래처럼 나누는 것을 기준으로 한다.
+- `timepiece_fsm`
+- `timepiece_datapath`
 
-| 구분 | 담당 내용 |
-| --- | --- |
-| `Common Control Logic` | `SW0` 모드 선택, `SW15` 시간 포맷 선택, `BtnR short` 표시 형식 전환, `BtnC` 전체 reset 처리 |
-| `Timepiece FSM` | `VIEW`, `SET`, `INDEX_SHIFT`, `INCREMENT_ONES`, `INCREMENT_TENS`, `DECREMENT_ONES`, `DECREMENT_TENS` 상태 처리 |
-| `Timer FSM` | `STOP`, `RUN`, `COUNT_UPDOWN`, `COUNT_CLEAR` 상태 처리 |
+## Timepiece가 들어갈 위치
 
-즉, 공통 제어 로직은 모든 기능이 함께 쓰는 입력을 정리하고, 각 FSM은 자기 기능 상태만 담당하는 구조로 본다.
+현재 구조를 기준으로 하면 `Timepiece`는 `Timer Unit`과 대칭적으로 들어가는 것이 가장 자연스러움.
 
-## 블록 다이어그램 이후 다음 단계
+즉 최종적으로는 아래 구조를 목표로 하면 됨.
 
-블록 다이어그램이 끝난 다음에는 바로 `State Diagram`으로 넘어가기보다, 먼저 `Function`과 `State`를 분리해서 문서화해야 한다.
+- `input_conditioning`
+- `common_control`
+- `timer_unit`
+- `timepiece_fsm + timepiece_datapath`
+- `display_select`
+- `fnd_controller`
 
-이유는 다음과 같다.
+특히 `Timepiece`는 `Timer`처럼 wrapper를 둘 수도 있고, 당장은 `fsm + datapath`를 직접 top에 연결해도 됨.
 
-- 블록 다이어그램은 구조를 보여준다.
-- 기능 표는 버튼과 스위치의 역할을 보여준다.
-- 상태도는 각 FSM의 상태 전이만 보여준다.
+## 현재 top에 대한 주의
 
-즉, 상태도를 제대로 그리기 위해서는 먼저 `03-function-spec.md`와 `04-state-spec.md`가 정리되어 있어야 한다.
+`top_stopwatch_watch.v`는 이름 그대로 legacy stopwatch top 성격이 강함.
+
+즉 현재 top은 아래 이유로 최종 구조 기준 문서로 보기 어렵다.
+
+- 이름이 아직 `stopwatch` 기준임
+- `control_unit`, `stopwatch_datapath` 흔적이 남아 있음
+- `Timepiece`가 최종 반영된 top이 아님
+
+따라서 블록 다이어그램 해석 기준은 `top_stopwatch_watch.v` 자체보다,
+
+- `input_conditioning`
+- `timer_unit`
+- `display_select`
+- `timepiece_datapath`
+
+같은 개별 블록 관계를 중심으로 보는 게 맞음.
+
+## Timepiece 구현 시 참고 포인트
+
+`Timepiece`를 구현할 때는 아래를 `Timer`에서 그대로 가져와 대칭적으로 맞추면 됨.
+
+- 입력 정제는 `input_conditioning` 결과를 그대로 사용하기
+- 제어는 `timepiece_fsm`
+- 데이터 경로는 `timepiece_datapath`
+- 표시 선택은 `display_select`가 담당하기
+
+즉 "Timepiece도 Timer처럼 제어와 데이터 경로를 분리하기"가 현재 문서 기준 핵심임.

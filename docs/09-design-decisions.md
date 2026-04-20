@@ -1,40 +1,49 @@
 # Watch Project Design Decisions
 
-## 구현 전 결정 항목
+## 문서 목적
 
-아래 항목은 구현 전에 반드시 문서로 유지해야 하는 부분이다.
+이 문서는 현재 `main` 구현을 기준으로 이미 굳은 결정과, `Timepiece` 구현 전에 아직 정해야 하는 결정을 나누어 적는 문서임.
 
-현재는 이 표 자체를 설계 기준으로 고정하고, 실제 구현 시 선택이 필요한 항목은 코드 착수 전에 명확히 확정한다.
+## 현재 구현 기준으로 사실상 고정된 것
 
-| 항목 | 확인 내용 | 현재 고정 기준 |
-| --- | --- | --- |
-| Reset 초기값 | 리셋 시 어떤 상태와 값으로 돌아가는지 | `timepiece_state=VIEW`, `timer_state=STOP`, `hour_format=HOUR_24`, `display_mode=DISP_HH_MM`, `position_shift=SHIFT_MSEC`, `count_updown=COUNT_UP`, `timepiece_value=12:00`, `timer_value=00:00`, 조합 기본값은 `edit_action=EDIT_IDLE`로 둔다 |
-| Timepiece 설정 진입 조건 | 언제 `SET`으로 들어가는지 | `BtnR hold 2s`로만 `VIEW ↔ SET` 전이를 허용한다 |
-| Timepiece 편집 단위 이동 | `BtnL`이 어떤 순서로 이동하는지 | `SHIFT_MSEC → SHIFT_SEC → SHIFT_MIN → SHIFT_HOUR → SHIFT_MSEC` 순으로 순환한다 |
-| Timepiece short/hold 편집 규칙 | `BtnU`, `BtnD` short/hold를 어떻게 구분하는지 | short는 1의 자리, `1.5초 hold`는 10의 자리 변경으로 고정한다 |
-| Timer가 0에 도달했을 때 동작 | `0 유지`, `자동 정지`, `랩어라운드` 중 무엇인지 | `0 유지` 또는 `0 유지 + stop` 중 하나를 명시적으로 고정 |
-| `BtnL Clear`를 RUN 중에 눌렀을 때 | 클리어 후 계속 RUN인지, STOP인지 | 둘 중 하나를 문서로 확정 |
-| 12-hour format의 `AM/PM` 처리 | 표시 여부와 내부 저장 여부 | 표시하지 않더라도 내부 상태 보유 여부를 정해야 함 |
-| Time Setting ON일 때 시간 동작 | 편집 중에도 Timepiece가 계속 흐르는지 | 실시간 카운터와 편집값을 분리하는 구조 권장 |
+| 항목 | 현재 기준 |
+| --- | --- |
+| 입력 정제 방식 | `debouncer -> input_conditioning` 구조 사용 |
+| Timer 제어 분리 | `timer_fsm + timer_datapath + timer_unit` 구조 사용 |
+| Timer 상태명 | `STOP`, `RUN`, `UPDOWN`, `CLEAR` |
+| Timer 복귀 방식 | `previous_state`를 저장하고 `UPDOWN`, `CLEAR` 후 복귀 |
+| 표시 선택 구조 | `display_select`가 `SW0`, `SW15`를 기준으로 선택 |
+| 공통 display 저장 | `common_control`이 display mode 저장 담당 |
 
-## 고정한 상태 이름 기준
+## Timepiece 구현 전에 맞춰야 하는 것
 
-기존의 `CLOCK`, `STOPWATCH` 계열 이름 대신 아래 기준을 사용한다.
+| 항목 | 현재 권장 방향 |
+| --- | --- |
+| Timepiece 구조 | `timepiece_fsm + timepiece_datapath + time_set_module`로 Timer와 대칭 맞추기 |
+| Timepiece 상태명 | `VIEW`, `SET`, `INDEX_SHIFT`, `INCREMENT_ONES`, `INCREMENT_TENS`, `DECREMENT_ONES`, `DECREMENT_TENS` |
+| 설정 버스 | `o_set_time[23:0]` 사용 |
+| 실시간 버스 | `o_timepiece_vault[23:0]` 사용 |
+| 편집 단위 저장 | `time_set_module` 내부 `set_index`로 유지 |
+| hold 처리 | `BtnU/BtnD hold 1.5s`는 FSM 또는 event decoding 쪽에서 구분 후 datapath로 전달 |
 
-- `CLOCK_VIEW` → `VIEW`
-- `CLOCK_SET` → `SET`
-- `SW_STOP` → `STOP`
-- `SW_RUN` → `RUN`
-- `clock_value` → `timepiece_value`
-- `stopwatch_value` → `timer_value`
-- `watch_mode` → 저장 상태로 두지 않고 `sw0` 또는 `is_timepiece_mode`, `is_timer_mode`로 해석
-- `time_setting` → 저장 상태로 두지 않고 `SET` 또는 `is_setting_state`로 해석
-- `run_state` → 저장 상태로 두지 않고 `STOP`, `RUN` 또는 `is_timer_running`으로 해석
+## 현재 main 기준 주의할 점
 
-이 이름 기준은 `clk`와의 혼동을 줄이기 위한 고정 명명 규칙으로 사용한다.
+아래는 "이미 구현되어 있으나 최종 문서 기준으로는 다시 볼 필요가 있는 부분"임.
 
-## 문서 흐름 내 위치
+| 항목 | 메모 |
+| --- | --- |
+| `common_control` | 현재는 `i_btnR_hold` 기반 display mode 토글 구조임 |
+| `display_select` | 현재 `SW15` 처리 방식은 추후 검토 필요 |
+| `top_stopwatch_watch` | 최종 watch top이라기보다 legacy stopwatch top 성격이 강함 |
+| `timepiece_fsm` | 아직 스텁이라 문서 기준으로 새로 채워야 함 |
 
-이 문서는 `Requirement`, `Architecture`, `Function`, `State`, `State Diagram`이 정리된 이후에 읽는 것을 기준으로 한다.
+## 결론
 
-즉, 이 문서는 기능과 상태를 새로 정의하는 문서가 아니라, 구현 전에 선택을 고정해야 하는 남은 설계 결정을 정리하는 문서다.
+현재 구현 기준으로는
+
+- Timer 쪽은 구조 레퍼런스
+- Timepiece 쪽은 구현 대상
+
+으로 보는 것이 가장 자연스러움.
+
+즉 앞으로의 핵심 결정은 "Timepiece를 Timer 구조와 얼마나 대칭적으로 맞출 것인가"에 있음.

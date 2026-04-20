@@ -216,8 +216,8 @@
 
 | 사람 | 구현 담당 | 자기 검증 담당 |
 | --- | --- | --- |
-| A | `button_event_decoder`, `common_control_logic`, `timepiece_fsm`, `timepiece_datapath` | 위 4개 모듈의 unit simulation |
-| B | `timer_fsm`, `timer_datapath`, `display_select_logic`, `top_watch_project` | 위 4개 모듈의 unit simulation |
+| 김연우(`mumallaeng`) | `timepiece_fsm`, `timepiece_datapath` | 위 2개 모듈의 unit simulation |
+| 이영현(`younghyun0702`) | `button_event_decoder`, `common_control_logic`, `timer_fsm`, `timer_datapath`, `display_select_logic`, `top_watch_project` | 위 모듈들의 unit simulation |
 
 ### unit test 권장 분배
 
@@ -225,8 +225,8 @@
 
 | 사람 | 작성할 testbench |
 | --- | --- |
-| A | `tb_button_event_decoder.v`, `tb_common_control_logic.v`, `tb_timepiece_fsm.v`, `tb_timepiece_datapath.v` |
-| B | `tb_timer_fsm.v`, `tb_timer_datapath.v`, `tb_display_select_logic.v`, `tb_top_smoke.v` 또는 `top_watch_project` 단위 기본 test |
+| 김연우(`mumallaeng`) | `tb_timepiece_fsm.v`, `tb_timepiece_datapath.v` |
+| 이영현(`younghyun0702`) | `tb_button_event_decoder.v`, `tb_common_control_logic.v`, `tb_timer_fsm.v`, `tb_timer_datapath.v`, `tb_display_select_logic.v`, `tb_top_smoke.v` 또는 `top_watch_project` 단위 기본 test |
 
 ### set 단위 통합 시뮬 분배
 
@@ -234,14 +234,14 @@
 
 | 사람 | 작성할 세트 테스트 | 목적 |
 | --- | --- | --- |
-| A | `tb_timepiece_set.v` | `button_debounce + button_event_decoder + timepiece_fsm + timepiece_datapath` 통합 검증 |
-| B | `tb_timer_set.v` | `button_debounce + timer_fsm + timer_datapath` 통합 검증 |
+| 김연우(`mumallaeng`) | `tb_timepiece_set.v` | `button_event_decoder + timepiece_fsm + timepiece_datapath` 통합 검증 |
+| 이영현(`younghyun0702`) | `tb_timer_set.v` | `button_debounce + timer_fsm + timer_datapath` 통합 검증 |
 
 추가로 표시 경로는 한 사람이 전담하는 편이 낫다.
 
 | 사람 | 작성할 표시 통합 테스트 | 목적 |
 | --- | --- | --- |
-| B | `tb_display_set.v` | `display_select_logic + fnd_controller` 검증 |
+| 이영현(`younghyun0702`) | `tb_display_set.v` | `display_select_logic + fnd_controller` 검증 |
 
 ### 상대 검증은 1인당 1개만 하는 권장안
 
@@ -249,8 +249,8 @@
 
 | 사람 | 상대 영역에서 맡을 테스트 1개 | 이유 |
 | --- | --- | --- |
-| A | `tb_timer_set_peer.v` 또는 `tb_timer_set.v` 보강 | B가 만든 `timer_fsm + timer_datapath` 통합이 실제로 잘 묶였는지 확인 |
-| B | `tb_timepiece_set_peer.v` 또는 `tb_timepiece_set.v` 보강 | A가 만든 `event + timepiece_fsm + datapath` 통합이 실제로 잘 묶였는지 확인 |
+| 김연우(`mumallaeng`) | `tb_timer_set_peer.v` 또는 `tb_timer_set.v` 보강 | 이영현이 만든 `timer_fsm + timer_datapath` 통합이 실제로 잘 묶였는지 확인 |
+| 이영현(`younghyun0702`) | `tb_timepiece_set_peer.v` 또는 `tb_timepiece_set.v` 보강 | 김연우가 만든 `timepiece_fsm + timepiece_datapath` 통합이 실제로 잘 묶였는지 확인 |
 
 즉, 상대 검증은 `unit`이 아니라 `set` 단계에서 한 번씩만 수행한다.
 
@@ -262,7 +262,7 @@
 
 | 경계 | 추천 테스트 | 담당 |
 | --- | --- | --- |
-| `Timepiece/Timer` 결과가 `Display Select Logic`으로 모이는 지점 | `tb_display_merge.v` 또는 `tb_top_watch_project.v` 일부 시나리오 | B 주도, A 확인 |
+| `Timepiece/Timer` 결과가 `Display Select Logic`으로 모이는 지점 | `tb_display_merge.v` 또는 `tb_top_watch_project.v` 일부 시나리오 | 이영현 주도, 김연우 확인 |
 | 전체 top에서 버튼 입력과 두 FSM 결과가 함께 동작하는 지점 | `tb_top_watch_project.v` | 공동 |
 
 따라서 상대 테스트를 억지로 unit까지 내릴 필요는 없고, 실제로는 `set 1개 + top 공동`이면 충분하다.
@@ -273,8 +273,8 @@
 
 | 사람 | top integration에서 맡을 시나리오 |
 | --- | --- |
-| A | `Timepiece` 중심 시나리오: `SET 진입`, `SHIFT_MSEC/SEC/MIN/HOUR`, short/hold 편집, `HH:MM ↔ SS:MS` 전환 |
-| B | `Timer` 중심 시나리오: `RUN/STOP`, `COUNT_UP/DOWN`, `CLEAR`, `Timepiece ↔ Timer` 모드 전환 |
+| 김연우(`mumallaeng`) | `Timepiece` 중심 시나리오: `SET 진입`, `SHIFT_MSEC/SEC/MIN/HOUR`, short/hold 편집, `HH:MM ↔ SS:MS` 전환 |
+| 이영현(`younghyun0702`) | `Timer` 중심 시나리오: `RUN/STOP`, `COUNT_UP/DOWN`, `CLEAR`, `Timepiece ↔ Timer` 모드 전환 |
 
 그리고 마지막 waveform review는 둘이 같이 본다.
 

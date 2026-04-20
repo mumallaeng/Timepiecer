@@ -2,57 +2,94 @@
 
 ## 문서 목적
 
-이 문서는 코드 구현 후 Vivado 등에서 확인하게 되는 실제 `RTL Schematic`에서 무엇을 점검할지 정리하기 위한 문서이다.
+이 문서는 현재 `main` 구현을 기준으로 RTL schematic에서 무엇을 확인해야 하는지 정리하는 문서임.
 
-즉, 이 문서는 상태도나 예상 구조와 실제 툴 결과가 일치하는지 확인하는 체크 문서다.
+즉 이미 구현된 Timer 구조와, 막 구현 중인 Timepiece 구조를 같은 기준으로 비교하기 위한 체크리스트로 보면 됨.
 
-## 확인 목적
+## 현재 구현 기준으로 먼저 봐야 할 것
 
-RTL Schematic을 보는 목적은 아래와 같다.
+### 1. `input_conditioning`
 
-- FSM과 Datapath 분리가 의도대로 되었는지 확인
-- 저장 레지스터와 조합 경로가 예상과 맞는지 확인
-- 불필요하게 복잡한 경로가 생기지 않았는지 확인
-- 모드 선택과 출력 선택 구조가 설계 의도와 맞는지 확인
+아래가 보여야 함.
 
-## 확인 대상
+- 버튼 4개 각각에 대한 `debouncer`
+- hold 검출 경로
+- `sw0`, `sw15` 전달 경로
 
-| 확인 항목 | 기대 구조 |
-| --- | --- |
-| `Timepiece FSM` | `VIEW`, `SET`, `INDEX_SHIFT`, `INCREMENT_ONES`, `INCREMENT_TENS`, `DECREMENT_ONES`, `DECREMENT_TENS` 상태 흐름이 반영되어야 한다 |
-| `Timer FSM` | `STOP`, `RUN`, `COUNT_UPDOWN`, `COUNT_CLEAR` 상태 흐름이 반영되어야 한다 |
-| 저장 레지스터 | `hour_format`, `display_mode`, `position_shift`, `count_updown`가 별도 저장값으로 보여야 한다 |
-| 데이터 경로 | `timepiece_value`, `timer_value`가 별도 Datapath로 분리되어야 한다 |
-| duration detect 경로 | `btnR_hold_2s`, `btnU_hold_1p5s`, `btnD_hold_1p5s`가 분리되어 보이거나 이에 해당하는 카운터/비교기 경로가 보여야 한다 |
-| 출력 선택 | `Display Select Logic` 이후에 `FND Controller`가 연결되어야 한다 |
+즉 입력 정제 블록이 Timer/Timepiece 바깥에서 공통으로 존재해야 함.
 
-## RTL Schematic에서 특히 볼 것
+### 2. `timer_fsm`
 
-| 영역 | 확인 포인트 |
-| --- | --- |
-| FSM 영역 | 상태 레지스터가 실제로 분리되어 보이는가 |
-| 입력 정제 영역 | debounce와 hold-time 검출 경로가 서로 구분되어 보이는가 |
-| Datapath 영역 | 값 저장 레지스터와 연산 경로가 분리되어 보이는가 |
-| MUX/선택 경로 | 모드 선택과 표시 선택이 예상대로 MUX 형태로 보이는가 |
-| 출력 영역 | `FND Controller`가 마지막 단계에 위치하는가 |
+아래 레지스터가 확인되면 정상에 가까움.
 
-## 예상 구조와 비교 기준
+- `current_state`
+- `next_state`
+- `previous_state`
+- `updown_state`
 
-실제 RTL schematic은 반드시 `06-expected-rtl-structure.md`와 비교해서 본다.
+즉 Timer 쪽은 현재 구현된 상태 흐름이 schematic에도 그대로 보여야 함.
 
-비교 항목:
+### 3. `timer_datapath`
 
-1. 블록 수가 예상과 크게 다르지 않은가
-2. FSM과 Datapath의 경계가 유지되는가
-3. 공통 제어와 출력 제어가 섞이지 않았는가
-4. 저장 레지스터와 조합 경로가 명확히 구분되는가
+아래 구조가 보여야 함.
 
-## 문서 활용 방식
+- `tick_gen_100hz`
+- `tick_counter` 4개
+- `msec -> sec -> min -> hour` cascade
 
-이 문서는 실제 RTL schematic 캡처를 붙이기 전의 기준 문서로 사용한다.
+이게 현재 `main`에서 가장 중요한 기준 구조임.
 
-나중에 구현이 끝나면 아래를 추가하면 된다.
+### 4. `timer_unit`
 
-- RTL schematic 캡처 이미지
-- 캡처에서 강조할 블록 표시
-- 예상 구조와 실제 구조 비교 코멘트
+아래 관계가 보이면 됨.
+
+- `timer_fsm` 출력
+- `timer_datapath` 입력
+- wrapper로 묶인 구조
+
+즉 `timer_unit`은 구현 기준 레퍼런스 블록으로 보면 됨.
+
+## Timepiece 쪽에서 앞으로 봐야 할 것
+
+Timepiece는 아래 구조가 Timer와 비슷하게 보여야 함.
+
+- `timepiece_fsm`
+- `timepiece_datapath`
+- `time_set_module`
+- `tick_gen_100hz`
+- `tick_counter` 4개
+
+즉 schematic에서
+
+- Timer는 이미 이렇게 되어 있는지 확인
+- Timepiece는 이 패턴으로 올라가고 있는지 확인
+
+하면 됨.
+
+## display 관련 확인 포인트
+
+현재 `main` 기준으로는 아래 두 블록도 중요함.
+
+- `common_control`
+- `display_select`
+
+RTL schematic에서 아래를 확인하면 됨.
+
+- `common_control` 안에 display mode 저장 플롭이 보이는지
+- `display_select` 안에 `SW0`, `SW15` 기준 mux 구조가 보이는지
+
+## top 관련 메모
+
+현재 `top_stopwatch_watch`는 legacy stopwatch top 성격이 강함.
+
+따라서 RTL schematic 확인 우선순위는 아래처럼 두는 것이 맞음.
+
+1. `timer_fsm`
+2. `timer_datapath`
+3. `timer_unit`
+4. `input_conditioning`
+5. `display_select`
+6. `timepiece_datapath`
+7. `timepiece_fsm`
+
+즉 top 전체보다, 개별 모듈 구조가 먼저 맞는지 보는 편이 더 중요함.
