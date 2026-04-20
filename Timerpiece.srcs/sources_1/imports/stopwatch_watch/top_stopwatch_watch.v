@@ -1,118 +1,180 @@
 `timescale 1ns / 1ps
 
-module top_stopwatch_watch (
-    input clk,
-    input rst,
-    input btnR,
-    input btnL,
-    input btnU,
-    input btnD,
-    input [2:0] sw,
+module top_stopwatch_watch #(
+    parameter CLK_FREQ_HZ = 100_000_000,
+    parameter BD_HZ       = 100_000,
+    parameter HOLD_TIME   = 100_000_000,
+    parameter BASIC_TIME  = 100,
+    parameter SCAN_HZ     = 1000,
+
+    parameter MSEC_WIDTH = 7,
+    parameter SEC_WIDTH  = 6,
+    parameter MIN_WIDTH  = 6,
+    parameter HOUR_WIDTH = 5,
+    parameter MSEC_TIMES = 100,
+    parameter SEC_TIMES  = 60,
+    parameter MIN_TIMES  = 60,
+    parameter HOUR_TIMES = 24
+
+) (
+    input        clk,
+    input        rst,
+    input        btnR,
+    input        btnL,
+    input        btnU,
+    input        btnD,
+    input        sw0,
+    input        sw15,
     output [3:0] fnd_com,
     output [7:0] fnd_data,
-    output [1:0] led
+    output       led0,
+    output       led15
 );
 
-    parameter MSEC_WIDTH = 7;
-    parameter SEC_WIDTH = 6;
-    parameter MIN_WIDTH = 6;
-    parameter HOUR_WIDTH = 5;
+    // 타이머 시간 값 와이어
+    wire [  MSEC_WIDTH  -1:0] w_timer_msec;
+    wire [  SEC_WIDTH   -1:0] w_timer_sec;
+    wire [  MIN_WIDTH   -1:0] w_timer_min;
+    wire [  HOUR_WIDTH  -1:0] w_timer_hour;
 
-    wire [MSEC_WIDTH-1:0] w_msec;
-    wire [SEC_WIDTH-1:0] w_sec;
-    wire [MIN_WIDTH-1:0] w_min;
-    wire [HOUR_WIDTH-1:0] w_hour;
+    // 타이머 시간 값 와이어
+    wire [  MSEC_WIDTH  -1:0] w_timepiece_msec;
+    wire [  SEC_WIDTH   -1:0] w_timepiece_sec;
+    wire [  MIN_WIDTH   -1:0] w_timepiece_min;
+    wire [  HOUR_WIDTH  -1:0] w_timepiece_hour;
 
-    wire w_run_stop;
-    wire w_clear;
-    wire w_down_mode;
-    wire w_display_sel;
-    wire [1:0] w_state_dbg;
+    //최종 시간 출력
+    wire [MSEC_WIDTH    -1:0] w_display_msec;
+    wire [SEC_WIDTH     -1:0] w_display_sec;
+    wire [MIN_WIDTH     -1:0] w_display_min;
+    wire [    HOUR_WIDTH-1:0] w_display_hour;
+    wire                      w_display_mode;
 
-    wire w_btnR;
-    wire w_btnL;
-    wire w_btnU;
-    wire w_btnD;
 
-    button_debounce U_BTN_R (
-        .clk(clk),
-        .rst(rst),
-        .i_btn(btnR),
-        .o_btn_sync(),
-        .o_btn_level(),
-        .o_btn_tick(w_btnR)
+    wire                      w_btnR;
+    wire                      w_btnL;
+    wire                      w_btnU;
+    wire                      w_btnD;
+    wire                      w_btnR_hold;
+    wire                      w_btnL_hold;
+    wire                      w_btnU_hold;
+    wire                      w_btnD_hold;
+    wire                      w_sw0;
+    wire                      w_sw15;
+
+
+    // 타이머 시간 값 와이어
+
+
+
+    input_conditioning #(
+        .CLK_FREQ_HZ(CLK_FREQ_HZ),  // 100MHz
+        .BD_HZ      (BD_HZ),        // 100kHz
+        .HOLD_TIME  (HOLD_TIME)     // 1초
+    ) U_BUTTON_EVENT_DECODER (
+        .clk        (clk),
+        .rst        (rst),
+        .btnU       (btnU),
+        .btnD       (btnD),
+        .btnL       (btnL),
+        .btnR       (btnR),
+        .sw0        (sw0),
+        .sw15       (sw15),
+        .o_btnU     (w_btnR),
+        .o_btnD     (w_btnL),
+        .o_btnL     (w_btnU),
+        .o_btnR     (w_btnD),
+        .o_btnU_hold(w_btnR_hold),
+        .o_btnD_hold(w_btnL_hold),
+        .o_btnL_hold(w_btnU_hold),
+        .o_btnR_hold(w_btnD_hold),
+        .o_sw0      (w_sw0),
+        .o_sw15     (w_sw15)
     );
 
-    button_debounce U_BTN_L (
-        .clk(clk),
-        .rst(rst),
-        .i_btn(btnL),
-        .o_btn_sync(),
-        .o_btn_level(),
-        .o_btn_tick(w_btnL)
+
+    timer_unit #(
+        .MAIN_CLK_100MHZ(CLK_FREQ_HZ),
+        .BASIC_TIME     (BASIC_TIME),
+        .MSEC_WIDTH     (MSEC_WIDTH),
+        .SEC_WIDTH      (SEC_WIDTH),
+        .MIN_WIDTH      (MIN_WIDTH),
+        .HOUR_WIDTH     (HOUR_WIDTH),
+        .MSEC_TIMES     (MSEC_TIMES),
+        .SEC_TIMES      (SEC_TIMES),
+        .MIN_TIMES      (MIN_TIMES),
+        .HOUR_TIMES     (HOUR_TIMES)
+    ) U_TIMER (
+        .clk   (clk),
+        .rst   (rst),
+        .i_btnD(w_btnD),
+        .i_btnL(w_btnL),
+        .i_btnU(w_btnU),
+        .i_sw0 (w_sw0),
+        .msec  (w_timer_msec),
+        .sec   (w_timer_sec),
+        .min   (w_timer_min),
+        .hour  (w_timer_hour)
     );
 
-    button_debounce U_BTN_U (
-        .clk(clk),
-        .rst(rst),
-        .i_btn(btnU),
-        .o_btn_sync(),
-        .o_btn_level(),
-        .o_btn_tick(w_btnU)
+    ////TIMEPIECE자리
+
+
+    common_control U_common_cont (
+        .clk           (clk),
+        .rst           (rst),
+        .i_btnR_hold   (w_btnR_hold),
+        .o_display_mode(w_display_mode)
+
     );
 
-    button_debounce U_BTN_D (
-        .clk(clk),
-        .rst(rst),
-        .i_btn(btnD),
-        .o_btn_sync(),
-        .o_btn_level(),
-        .o_btn_tick(w_btnD)
+    display_select#(
+        .MAIN_CLK_100MHZ(CLK_FREQ_HZ),
+        .MSEC_WIDTH     (MSEC_WIDTH),
+        .SEC_WIDTH      (SEC_WIDTH),
+        .MIN_WIDTH      (MIN_WIDTH),
+        .HOUR_WIDTH     (HOUR_WIDTH)
+    ) (
+        .i_timer_msec(w_timer_msec),
+        .i_timer_sec(w_timer_sec),
+        .i_timer_min(w_timer_min),
+        .i_timer_hour(w_timer_hour),
+        .i_timepiece_msec(w_timepiece_msec),
+        .i_timepiece_sec(w_timepiece_sec),
+        .i_timepiece_min(w_timepiece_min),
+        .i_timepiece_hour(w_timepiece_hour),
+        .i_sw0(w_sw0),
+        .i_sw15(w_sw15),
+        .o_display_msec(w_display_msec),
+        .o_display_sec(w_display_min),
+        .o_display_min(w_display_min),
+        .o_display_hour(w_display_hour),
+        .o_led_12_hour(led15),
+        .o_led_timer(led0)
+
     );
 
-    control_unit U_CONTROL_UNIT (
-        .clk(clk),
-        .rst(rst),
-        .i_run_stop(w_btnR),
-        .i_clear(w_btnL),
-        .i_btnu(w_btnU),
-        .i_btnd(w_btnD),
-        .i_sw(sw),
-        .o_run_stop(w_run_stop),
-        .o_clear(w_clear),
-        .o_down_mode(w_down_mode),
-        .o_display_sel(w_display_sel),
-        .o_led(led),
-        .o_state_dbg(w_state_dbg)
-    );
 
-    stopwatch_datapath U_STOPWATCH_DATAPATH (
-        .clk(clk),
-        .rst(rst),
-        .i_run_stop(w_run_stop),
-        .i_clear(w_clear),
-        .i_down_mode(w_down_mode),
-        .msec(w_msec),
-        .sec(w_sec),
-        .min(w_min),
-        .hour(w_hour)
-    );
 
     fnd_controller #(
-        .MSEC_WIDTH(MSEC_WIDTH),
-        .SEC_WIDTH (SEC_WIDTH),
-        .MIN_WIDTH (MIN_WIDTH),
-        .HOUR_WIDTH(HOUR_WIDTH)
+        .MAIN_CLK_100MHZ(CLK_FREQ_HZ),
+        .SCAN_HZ        (SCAN_HZ),
+        .MSEC_WIDTH     (MSEC_WIDTH),
+        .SEC_WIDTH      (SEC_WIDTH),
+        .MIN_WIDTH      (MIN_WIDTH),
+        .HOUR_WIDTH     (HOUR_WIDTH)
     ) U_FND_CONTROLLER (
-        .clk(clk),
-        .rst(rst),
-        .sw(w_display_sel),
-        .msec(w_msec),
-        .sec(w_sec),
-        .min(w_min),
-        .hour(w_hour),
-        .fnd_com(fnd_com),
-        .fnd_data(fnd_data)
+        .clk           (clk),
+        .rst           (rst),
+        .i_display_mode(w_display_mode),
+        .msec          (w_display_msec),
+        .sec           (w_display_sec),
+        .min           (w_display_min),
+        .hour          (w_display_hour),
+        .fnd_com       (fnd_com),
+        .fnd_data      (fnd_data)
     );
+
+
 
 endmodule
