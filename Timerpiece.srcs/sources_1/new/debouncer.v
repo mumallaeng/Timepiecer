@@ -3,7 +3,9 @@
 module debouncer #(
     parameter CLK_FREQ_HZ = 100_000_000,
     parameter BD_HZ       = 100_000,
-    parameter HOLD_TIME   = 100_000_000
+    parameter HOLD_TIME   = 100_000_000,
+    parameter REPEAT_ENABLE = 0,
+    parameter REPEAT_TIME = 20_000_000
 ) (
     input clk,
     input rst,
@@ -68,6 +70,13 @@ module debouncer #(
                         hold_count_reg <= 32'd0;
                         hold_fired_reg <= 1'b1;
                         o_btn_hold     <= 1'b1;
+                    end else begin
+                        hold_count_reg <= hold_count_reg + 1'b1;
+                    end
+                end else if (REPEAT_ENABLE) begin
+                    if (hold_count_reg == REPEAT_TIME - 1) begin
+                        hold_count_reg <= 32'd0;
+                        o_btn_hold     <= 1'b1;  // hold 이후에는 repeat 주기마다 추가 pulse 발생
                     end else begin
                         hold_count_reg <= hold_count_reg + 1'b1;
                     end

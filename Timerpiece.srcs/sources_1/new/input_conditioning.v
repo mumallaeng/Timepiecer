@@ -5,7 +5,8 @@ module input_conditioning #(
     parameter BD_HZ            = 100_000,
     parameter HOLD_TIME_BTN_R  = 200_000_000,
     parameter HOLD_TIME_BTN_UD = 150_000_000,
-    parameter HOLD_TIME_BTN_L  = 150_000_000
+    parameter HOLD_TIME_BTN_L  = 150_000_000,
+    parameter REPEAT_TIME_BTN_UD = 20_000_000
 ) (
     input clk,
     input rst,
@@ -33,7 +34,9 @@ module input_conditioning #(
     debouncer #(
         .CLK_FREQ_HZ(CLK_FREQ_HZ),
         .BD_HZ(BD_HZ),
-        .HOLD_TIME(HOLD_TIME_BTN_UD)
+        .HOLD_TIME(HOLD_TIME_BTN_UD),
+        .REPEAT_ENABLE(1),
+        .REPEAT_TIME(REPEAT_TIME_BTN_UD)
     ) U_BTN_U (
         .clk(clk),
         .rst(rst),
@@ -45,7 +48,9 @@ module input_conditioning #(
     debouncer #(
         .CLK_FREQ_HZ(CLK_FREQ_HZ),
         .BD_HZ(BD_HZ),
-        .HOLD_TIME(HOLD_TIME_BTN_UD)
+        .HOLD_TIME(HOLD_TIME_BTN_UD),
+        .REPEAT_ENABLE(1),
+        .REPEAT_TIME(REPEAT_TIME_BTN_UD)
     ) U_BTN_D (
         .clk(clk),
         .rst(rst),

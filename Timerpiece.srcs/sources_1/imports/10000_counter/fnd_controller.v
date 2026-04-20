@@ -11,6 +11,7 @@ module fnd_controller #(
     input clk,
     input rst,
     input i_display_mode,  // sw[0] , 0 : msec_sec, 1 : mon_hour
+    input i_show_center_dot,
     input [2:0] i_set_index,  // setting index
     input [MSEC_WIDTH  -1:0] msec,
     input [SEC_WIDTH   -1:0] sec,
@@ -39,12 +40,7 @@ module fnd_controller #(
     wire [3:0]  w_min_digit_1_disp, w_min_digit_10_disp;
     wire [3:0]  w_hour_digit_1_disp, w_hour_digit_10_disp;
 
-    //dat 표현을 위한 
-    reg  [15:0] dot_index;
-    wire [3:0] dot_hour, dot_min, dot_sec, dot_msec;
     reg blink_msec, blink_sec, blink_min, blink_hour;
-
-    assign {dot_hour, dot_min, dot_sec, dot_msec} = dot_index;
 
     assign w_msec_digit_1_disp  = blink_msec ? 4'hf : w_msec_digit_1;
     assign w_msec_digit_10_disp = blink_msec ? 4'hf : w_msec_digit_10;
@@ -64,15 +60,6 @@ module fnd_controller #(
             half_sec_sig      <= ~half_sec_sig;  // 0.5초마다 blink 위상 토글
         end else begin
             blink_counter_reg <= blink_counter_reg + 1'b1;
-        end
-    end
-
-    always @(*) begin
-        // 기본적으로 현재 표시 모드의 ':'를 항상 켜 둠
-        if (i_display_mode) begin
-            dot_index = {4'he, 4'he, 4'hf, 4'hf};  // HH:MM
-        end else begin
-            dot_index = {4'hf, 4'hf, 4'he, 4'he};  // SS:MS
         end
     end
 
@@ -134,9 +121,9 @@ module fnd_controller #(
         .in1    (w_msec_digit_10_disp),    // digit 10
         .in2    (w_sec_digit_1_disp),      // digit 100
         .in3    (w_sec_digit_10_disp),     // digit 1000
-        .in4    (dot_msec),           // digit 1
+        .in4    (4'hf),               // right-end dot는 사용하지 않음
         .in5    (4'hf),               // digit 10
-        .in6    (dot_sec),            // digit 100
+        .in6    (i_show_center_dot ? 4'he : 4'hf), // 가운데 점은 timepiece에서만 켬
         .in7    (4'hf),               // digit 1000
         .sel    (w_digit_sel),        // to select input
         .out_mux(w_out_mux_msec_sec)
@@ -147,9 +134,9 @@ module fnd_controller #(
         .in1    (w_min_digit_10_disp),     // digit 10
         .in2    (w_hour_digit_1_disp),     // digit 100
         .in3    (w_hour_digit_10_disp),    // digit 1000
-        .in4    (dot_min),
+        .in4    (4'hf),               // right-end dot는 사용하지 않음
         .in5    (4'hf),
-        .in6    (dot_hour),
+        .in6    (i_show_center_dot ? 4'he : 4'hf), // 가운데 점은 timepiece에서만 켬
         .in7    (4'hf),
         .sel    (w_digit_sel),        // to select input
         .out_mux(w_out_mux_min_hour)

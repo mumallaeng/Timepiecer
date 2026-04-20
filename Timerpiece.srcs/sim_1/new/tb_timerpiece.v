@@ -3,9 +3,12 @@
 module tb_timerpiece ();
 
     localparam UNIT_HOUR = 2'd0;
+    localparam UNIT_MIN  = 2'd1;
     localparam UNIT_SEC  = 2'd2;
+    localparam UNIT_MSEC = 2'd3;
     localparam INIT_HOUR = 5'd13;
     localparam INIT_MIN  = 6'd59;
+    localparam MSEC_TIMES = 100;
 
     // top 입력 자극용 신호
     reg clk;
@@ -16,6 +19,7 @@ module tb_timerpiece ();
     reg btnD;
     reg sw0;
     reg sw15;
+    reg [6:0] msec_before_hold;
 
     wire [3:0] fnd_com;
     wire [7:0] fnd_data;
@@ -28,6 +32,7 @@ module tb_timerpiece ();
         .HOLD_TIME_BTN_R(200),
         .HOLD_TIME_BTN_UD(150),
         .HOLD_TIME_BTN_L(150),
+        .REPEAT_TIME_BTN_UD(80),
         .BASIC_TIME(100),
         .SCAN_HZ(100)
     ) UUT (
@@ -111,11 +116,11 @@ module tb_timerpiece ();
     end
     endtask
 
-    // btnU hold 입력: +10 동작용
+    // btnU hold 입력: hold 이후 repeat pulse가 계속 나오는지 확인할 때 사용
     task press_btnU_hold;
     begin
         btnU = 1'b1;
-        wait_cycles(260);
+        wait_cycles(380);
         btnU = 1'b0;
         wait_cycles(120);
     end
@@ -159,6 +164,26 @@ module tb_timerpiece ();
     end
     endtask
 
+    function [6:0] wrap_add_msec;
+        input [6:0] value;
+        input integer step;
+        integer sum;
+    begin
+        sum = value + step;
+        if (sum >= MSEC_TIMES) wrap_add_msec = sum - MSEC_TIMES;
+        else wrap_add_msec = sum[6:0];
+    end
+    endfunction
+
+    function integer wrap_delta_msec;
+        input [6:0] before_value;
+        input [6:0] after_value;
+    begin
+        if (after_value >= before_value) wrap_delta_msec = after_value - before_value;
+        else wrap_delta_msec = after_value + MSEC_TIMES - before_value;
+    end
+    endfunction
+
     initial begin
         // 초기값: reset asserted, Timepiece 선택, 24시간제
         clk  = 1'b0;
@@ -195,25 +220,27 @@ module tb_timerpiece ();
             $display("FAIL tb_timerpiece: timepiece display mode did not toggle");
             $fatal;
         end
-        // 4) SS:MS 상태에서 btnR hold로 set 모드에 진입하면 sec부터 편집해야 함
+        // 4) SS:MS 상태에서 btnR hold로 set 모드에 진입하면 msec부터 편집해야 함
         press_btnR_hold;
         if (!UUT.w_timepiece_set_mode) begin
             $display("FAIL tb_timerpiece: failed to enter timepiece set mode");
             $fatal;
         end
-        if (UUT.w_timepiece_set_index !== UNIT_SEC) begin
+        if (UUT.w_timepiece_set_index !== UNIT_MSEC) begin
             $display("FAIL tb_timerpiece: ss:ms set entry index mismatch");
             $fatal;
         end
 
-        // 5) ss:ms set 모드에서 btnU short는 sec를 편집해야 함
-        press_btnU_short;  // sec +1
-        if (UUT.w_timepiece_set_time[12:7] !== 6'd1) begin
-            $display("FAIL tb_timerpiece: sec edit mismatch in ss:ms set mode");
+        // 5) ss:ms set 모드에서 btnU hold는 현재 msec 기준으로 tens 편집이 반복되어야 함
+        msec_before_hold = UUT.w_timepiece_set_time[6:0];
+        press_btnU_hold;
+        if (wrap_delta_msec(msec_before_hold, UUT.w_timepiece_set_time[6:0]) < 20) begin
+            $display("FAIL tb_timerpiece: msec hold-repeat mismatch in ss:ms set mode");
             $fatal;
         end
 
         // 6) set 중에도 btnR short로 hh:mm으로 전환 가능해야 하고, set 모드는 유지되어야 함
+        //    오른쪽 단위를 보고 있었다면 hh:mm에서도 오른쪽(min)으로 유지되어야 함
         press_btnR_short;
         @(negedge clk);
         if (!UUT.w_timepiece_set_mode) begin
@@ -224,12 +251,17 @@ module tb_timerpiece ();
             $display("FAIL tb_timerpiece: set-mode display mode restore mismatch");
             $fatal;
         end
-        if (UUT.w_timepiece_set_index !== UNIT_HOUR) begin
+        if (UUT.w_timepiece_set_index !== UNIT_MIN) begin
             $display("FAIL tb_timerpiece: set index remap mismatch after display toggle");
             $fatal;
         end
 
-        // 7) hh:mm set 상태에서 btnU short로 hour를 14까지 편집
+        // 7) hh:mm set 상태에서 오른쪽(min)에서 시작하므로 한번 shift 후 hour를 편집
+        press_btnL_short;
+        if (UUT.w_timepiece_set_index !== UNIT_HOUR) begin
+            $display("FAIL tb_timerpiece: hour shift mismatch in hh:mm set mode");
+            $fatal;
+        end
         press_btnU_short;  // 13 -> 14 hour
 
         if (UUT.w_timepiece_set_time[23:19] !== 5'd14) begin
@@ -258,12 +290,20 @@ module tb_timerpiece ();
         end
 
         @(negedge clk);
-        if (UUT.w_timepiece_hour !== 5'd14) begin
+        if (UUT.w_timepiece_hour !== UUT.U_TIMEPIECE_DATAPATH.w_set_time_load[23:19]) begin
             $display("FAIL tb_timerpiece: live hour was not updated after set exit");
             $fatal;
         end
-        if (UUT.w_timepiece_sec !== 6'd1) begin
+        if (UUT.w_timepiece_min !== UUT.U_TIMEPIECE_DATAPATH.w_set_time_load[18:13]) begin
+            $display("FAIL tb_timerpiece: live min was not updated after set exit");
+            $fatal;
+        end
+        if (UUT.w_timepiece_sec !== UUT.U_TIMEPIECE_DATAPATH.w_set_time_load[12:7]) begin
             $display("FAIL tb_timerpiece: live sec was not updated after set exit");
+            $fatal;
+        end
+        if (UUT.w_timepiece_msec !== UUT.U_TIMEPIECE_DATAPATH.w_set_time_load[6:0]) begin
+            $display("FAIL tb_timerpiece: live msec was not updated after set exit");
             $fatal;
         end
         expect_display(5'd2, UUT.w_timepiece_set_time[18:13], UUT.w_timepiece_set_time[12:7], UUT.w_timepiece_set_time[6:0]);

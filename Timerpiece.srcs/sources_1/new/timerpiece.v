@@ -6,6 +6,7 @@ module timerpiece #(
     parameter HOLD_TIME_BTN_R  = 200_000_000,
     parameter HOLD_TIME_BTN_UD = 150_000_000,
     parameter HOLD_TIME_BTN_L  = 150_000_000,
+    parameter REPEAT_TIME_BTN_UD = 20_000_000,
     parameter BASIC_TIME       = 100,
     parameter SCAN_HZ          = 1000,
     parameter MSEC_WIDTH       = 7,
@@ -79,7 +80,8 @@ module timerpiece #(
         .BD_HZ(BD_HZ),
         .HOLD_TIME_BTN_R(HOLD_TIME_BTN_R),
         .HOLD_TIME_BTN_UD(HOLD_TIME_BTN_UD),
-        .HOLD_TIME_BTN_L(HOLD_TIME_BTN_L)
+        .HOLD_TIME_BTN_L(HOLD_TIME_BTN_L),
+        .REPEAT_TIME_BTN_UD(REPEAT_TIME_BTN_UD)
     ) U_INPUT_CONDITIONING (
         .clk(clk),
         .rst(rst),
@@ -232,6 +234,7 @@ module timerpiece #(
         .clk(clk),
         .rst(rst),
         .i_display_mode(w_fnd_display_mode),
+        .i_show_center_dot(!w_sw0),
         .i_set_index(w_fnd_set_index),
         .msec(w_display_msec),
         .sec(w_display_sec),

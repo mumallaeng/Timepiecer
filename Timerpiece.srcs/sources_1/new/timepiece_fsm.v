@@ -28,10 +28,10 @@ module timepiece_fsm (
     localparam [2:0] DECREMENT_ONES  = 3'b101;
     localparam [2:0] DECREMENT_TENS  = 3'b110;
 
-    localparam [1:0] UNIT_HOUR = 2'd0;
-    localparam [1:0] UNIT_MIN  = 2'd1;
-    localparam [1:0] UNIT_SEC  = 2'd2;
-    localparam [1:0] UNIT_MSEC = 2'd3;
+    localparam [1:0] UNIT_HOUR = 2'd0;  // HH:MM left
+    localparam [1:0] UNIT_MIN  = 2'd1;  // HH:MM right
+    localparam [1:0] UNIT_SEC  = 2'd2;  // SS:MS left
+    localparam [1:0] UNIT_MSEC = 2'd3;  // SS:MS right
 
     reg [2:0] current_state;
     reg [2:0] next_state;
@@ -42,8 +42,8 @@ module timepiece_fsm (
     function [1:0] default_unit_for_display;
         input display_mode;
     begin
-        if (display_mode) default_unit_for_display = UNIT_HOUR;  // HH:MM
-        else              default_unit_for_display = UNIT_SEC;   // SS:MS
+        if (display_mode) default_unit_for_display = UNIT_MIN;   // HH:MM은 오른쪽(MM)부터 시작
+        else              default_unit_for_display = UNIT_MSEC;  // SS:MS는 오른쪽(MS)부터 시작
     end
     endfunction
 
@@ -69,20 +69,26 @@ module timepiece_fsm (
 
     function [1:0] next_unit;
         input [1:0] current_unit;
+        input display_mode;
     begin
-        case (current_unit)
-            UNIT_HOUR: next_unit = UNIT_MIN;
-            UNIT_MIN:  next_unit = UNIT_SEC;
-            UNIT_SEC:  next_unit = UNIT_MSEC;
-            default:   next_unit = UNIT_HOUR;
-        endcase
+        if (display_mode) begin
+            case (current_unit)
+                UNIT_HOUR: next_unit = UNIT_MIN;
+                default:   next_unit = UNIT_HOUR;  // MIN -> HOUR
+            endcase
+        end else begin
+            case (current_unit)
+                UNIT_SEC:  next_unit = UNIT_MSEC;
+                default:   next_unit = UNIT_SEC;   // MSEC -> SEC
+            endcase
+        end
     end
     endfunction
 
     always @(posedge clk or posedge rst) begin
         if (rst) begin  // reset이면 기본 표시 상태로 초기화
             current_state <= VIEW;
-            set_index_reg <= UNIT_HOUR;
+            set_index_reg <= UNIT_MIN;
             display_mode_d_reg <= 1'b1;
         end else begin  // 평소에는 다음 상태로 전이
             current_state <= next_state;
@@ -116,7 +122,7 @@ module timepiece_fsm (
                         set_index_next = default_unit_for_display(i_display_mode);
                     end else if (i_btnL) begin
                         next_state = INDEX_SHIFT;                           // BtnL은 편집 단위를 다음 단위로 이동
-                        set_index_next = next_unit(set_index_reg);
+                        set_index_next = next_unit(set_index_reg, i_display_mode);
                     end
                     else if (i_btnU) next_state = INCREMENT_ONES;           // BtnU short는 +1
                     else if (i_btnU_hold) next_state = INCREMENT_TENS;      //      hold는 +10 상태로 진입

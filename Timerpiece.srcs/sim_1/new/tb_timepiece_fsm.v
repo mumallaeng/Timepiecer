@@ -134,64 +134,64 @@ module tb_timepiece_fsm ();
         rst = 1'b0;
 
         // 1) reset 직후에는 VIEW 상태여야 함
-        expect_outputs(1'b0, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        expect_outputs(1'b0, UNIT_MIN, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 
-        // 2) HH:MM 표시 상태에서 BtnR hold로 SET 상태 진입 시 hour부터 편집해야 함
+        // 2) HH:MM 표시 상태에서 BtnR hold로 SET 상태 진입 시 min부터 편집해야 함
         pulse_btnR_hold;
+        expect_outputs(1'b1, UNIT_MIN, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+
+        // 3) BtnL은 HH:MM 안에서 MIN <-> HOUR만 토글해야 함
+        pulse_btnL;
+        expect_outputs(1'b1, UNIT_HOUR, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0);
         expect_outputs(1'b1, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 
-        // 3) BtnL은 INDEX_SHIFT 상태를 거쳐 1클럭 펄스를 내보내야 함
-        pulse_btnL;
-        expect_outputs(1'b1, UNIT_MIN, 1'b1, 1'b0, 1'b0, 1'b0, 1'b0);
-        expect_outputs(1'b1, UNIT_MIN, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
-
-        // 4) BtnU short는 현재 선택 단위(min)에 increment 펄스 1번 출력
+        // 4) BtnU short는 현재 선택 단위(hour)에 increment 펄스 1번 출력
         pulse_btnU;
-        expect_outputs(1'b1, UNIT_MIN, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0);
-        expect_outputs(1'b1, UNIT_MIN, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        expect_outputs(1'b1, UNIT_HOUR, 1'b0, 1'b1, 1'b0, 1'b0, 1'b0);
+        expect_outputs(1'b1, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 
         // 5) BtnU hold는 increment_tens 펄스 1번 출력
         pulse_btnU_hold;
-        expect_outputs(1'b1, UNIT_MIN, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0);
-        expect_outputs(1'b1, UNIT_MIN, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        expect_outputs(1'b1, UNIT_HOUR, 1'b0, 1'b0, 1'b1, 1'b0, 1'b0);
+        expect_outputs(1'b1, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 
         // 6) BtnD short는 decrement 펄스 1번 출력
         pulse_btnD;
-        expect_outputs(1'b1, UNIT_MIN, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0);
-        expect_outputs(1'b1, UNIT_MIN, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        expect_outputs(1'b1, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b1, 1'b0);
+        expect_outputs(1'b1, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 
         // 7) BtnD hold는 decrement_tens 펄스 1번 출력
         pulse_btnD_hold;
-        expect_outputs(1'b1, UNIT_MIN, 1'b0, 1'b0, 1'b0, 1'b0, 1'b1);
-        expect_outputs(1'b1, UNIT_MIN, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        expect_outputs(1'b1, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b0, 1'b1);
+        expect_outputs(1'b1, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 
         // 8) SET 상태에서 BtnR hold가 들어오면 VIEW로 복귀
         pulse_btnR_hold;
-        expect_outputs(1'b0, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        expect_outputs(1'b0, UNIT_MIN, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 
-        // 9) SS:MS 표시 상태에서 SET 진입 시 sec부터 편집해야 함
+        // 9) SS:MS 표시 상태에서 SET 진입 시 msec부터 편집해야 함
         i_display_mode = 1'b0;
         @(negedge clk);
         pulse_btnR_hold;
-        expect_outputs(1'b1, UNIT_SEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        expect_outputs(1'b1, UNIT_MSEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 
-        // 10) set 중 display mode가 HH:MM으로 바뀌면 set 모드는 유지되고 sec -> hour로 remap되어야 함
+        // 10) set 중 display mode가 HH:MM으로 바뀌면 right stays right라서 msec -> min으로 remap되어야 함
         i_display_mode = 1'b1;
         @(posedge clk);
-        expect_outputs(1'b1, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        expect_outputs(1'b1, UNIT_MIN, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 
-        // 11) 다시 SS:MS로 바꾸면 hour -> sec로 remap되어야 함
+        // 11) 다시 SS:MS로 바꾸면 min -> msec으로 remap되어야 함
         i_display_mode = 1'b0;
         @(posedge clk);
-        expect_outputs(1'b1, UNIT_SEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        expect_outputs(1'b1, UNIT_MSEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 
         // 12) sw0가 1이면 강제로 VIEW 유지
         pulse_btnR_hold;
-        expect_outputs(1'b0, UNIT_SEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        expect_outputs(1'b0, UNIT_MSEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
         pulse_btnR_hold;
-        expect_outputs(1'b1, UNIT_SEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        expect_outputs(1'b1, UNIT_MSEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
         i_sw0 = 1'b1;
-        expect_outputs(1'b0, UNIT_SEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        expect_outputs(1'b0, UNIT_MSEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
         i_sw0 = 1'b0;
 
         $display("PASS tb_timepiece_fsm");
