@@ -161,24 +161,24 @@
       <obj_property name="label">Timepiece</obj_property>
       <obj_property name="DisplayName">label</obj_property>
       <obj_property name="isExpanded"/>
-      <wvobject type="array" fp_name="/tb_timepiecer/UUT/w_timepiece_hour">
-         <obj_property name="ElementShortName">w_timepiece_hour[4:0]</obj_property>
-         <obj_property name="ObjectShortName">w_timepiece_hour[4:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_timepiecer/UUT/U_TIMEPIECE/U_TIMEPIECE_DATAPATH/hour">
+         <obj_property name="ElementShortName">timepiece_hour[4:0]</obj_property>
+         <obj_property name="ObjectShortName">timepiece_hour[4:0]</obj_property>
          <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
       <obj_property name="CustomSignalColor">#A8A8A8</obj_property><obj_property name="UseCustomSignalColor">true</obj_property></wvobject>
-      <wvobject type="array" fp_name="/tb_timepiecer/UUT/w_timepiece_min">
-         <obj_property name="ElementShortName">w_timepiece_min[5:0]</obj_property>
-         <obj_property name="ObjectShortName">w_timepiece_min[5:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_timepiecer/UUT/U_TIMEPIECE/U_TIMEPIECE_DATAPATH/min">
+         <obj_property name="ElementShortName">timepiece_min[5:0]</obj_property>
+         <obj_property name="ObjectShortName">timepiece_min[5:0]</obj_property>
          <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
       <obj_property name="CustomSignalColor">#A8A8A8</obj_property><obj_property name="UseCustomSignalColor">true</obj_property></wvobject>
-      <wvobject type="array" fp_name="/tb_timepiecer/UUT/w_timepiece_sec">
-         <obj_property name="ElementShortName">w_timepiece_sec[5:0]</obj_property>
-         <obj_property name="ObjectShortName">w_timepiece_sec[5:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_timepiecer/UUT/U_TIMEPIECE/U_TIMEPIECE_DATAPATH/sec">
+         <obj_property name="ElementShortName">timepiece_sec[5:0]</obj_property>
+         <obj_property name="ObjectShortName">timepiece_sec[5:0]</obj_property>
          <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
       <obj_property name="CustomSignalColor">#A8A8A8</obj_property><obj_property name="UseCustomSignalColor">true</obj_property></wvobject>
-      <wvobject type="array" fp_name="/tb_timepiecer/UUT/w_timepiece_msec">
-         <obj_property name="ElementShortName">w_timepiece_msec[6:0]</obj_property>
-         <obj_property name="ObjectShortName">w_timepiece_msec[6:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_timepiecer/UUT/U_TIMEPIECE/U_TIMEPIECE_DATAPATH/msec">
+         <obj_property name="ElementShortName">timepiece_msec[6:0]</obj_property>
+         <obj_property name="ObjectShortName">timepiece_msec[6:0]</obj_property>
          <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
       <obj_property name="CustomSignalColor">#A8A8A8</obj_property><obj_property name="UseCustomSignalColor">true</obj_property></wvobject>
    </wvobject>
@@ -211,37 +211,37 @@
       <obj_property name="label">Display</obj_property>
       <obj_property name="DisplayName">label</obj_property>
       <obj_property name="isExpanded"/>
-      <wvobject type="array" fp_name="/tb_timepiecer/UUT/w_display_hour">
-         <obj_property name="ElementShortName">w_display_hour[4:0]</obj_property>
-         <obj_property name="ObjectShortName">w_display_hour[4:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_timepiecer/UUT/U_DISPLAY/w_display_hour">
+         <obj_property name="ElementShortName">display_hour[4:0]</obj_property>
+         <obj_property name="ObjectShortName">display_hour[4:0]</obj_property>
          <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
          <obj_property name="CustomSignalColor">#A8A8A8</obj_property>
          <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject type="array" fp_name="/tb_timepiecer/UUT/w_display_min">
-         <obj_property name="ElementShortName">w_display_min[5:0]</obj_property>
-         <obj_property name="ObjectShortName">w_display_min[5:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_timepiecer/UUT/U_DISPLAY/w_display_min">
+         <obj_property name="ElementShortName">display_min[5:0]</obj_property>
+         <obj_property name="ObjectShortName">display_min[5:0]</obj_property>
          <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
          <obj_property name="CustomSignalColor">#A8A8A8</obj_property>
          <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject type="array" fp_name="/tb_timepiecer/UUT/w_display_sec">
-         <obj_property name="ElementShortName">w_display_sec[5:0]</obj_property>
-         <obj_property name="ObjectShortName">w_display_sec[5:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_timepiecer/UUT/U_DISPLAY/w_display_sec">
+         <obj_property name="ElementShortName">display_sec[5:0]</obj_property>
+         <obj_property name="ObjectShortName">display_sec[5:0]</obj_property>
          <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
          <obj_property name="CustomSignalColor">#A8A8A8</obj_property>
          <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject type="array" fp_name="/tb_timepiecer/UUT/w_display_msec">
-         <obj_property name="ElementShortName">w_display_msec[6:0]</obj_property>
-         <obj_property name="ObjectShortName">w_display_msec[6:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_timepiecer/UUT/U_DISPLAY/w_display_msec">
+         <obj_property name="ElementShortName">display_msec[6:0]</obj_property>
+         <obj_property name="ObjectShortName">display_msec[6:0]</obj_property>
          <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
          <obj_property name="CustomSignalColor">#A8A8A8</obj_property>
          <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
-      <wvobject type="array" fp_name="/tb_timepiecer/UUT/w_fnd_set_index">
-         <obj_property name="ElementShortName">w_fnd_set_index[2:0]</obj_property>
-         <obj_property name="ObjectShortName">w_fnd_set_index[2:0]</obj_property>
+      <wvobject type="array" fp_name="/tb_timepiecer/UUT/U_DISPLAY/w_fnd_set_index">
+         <obj_property name="ElementShortName">fnd_set_index[2:0]</obj_property>
+         <obj_property name="ObjectShortName">fnd_set_index[2:0]</obj_property>
          <obj_property name="Radix">UNSIGNEDDECRADIX</obj_property>
       <obj_property name="CustomSignalColor">#A8A8A8</obj_property><obj_property name="UseCustomSignalColor">true</obj_property></wvobject>
    </wvobject>
