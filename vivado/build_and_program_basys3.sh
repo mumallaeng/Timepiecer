@@ -12,7 +12,6 @@ project_root=$(cd "$script_dir/.." && pwd)
 
 container_name="${VIVADO_CONTAINER_NAME:-vivado_container}"
 vivado_version="${VIVADO_VERSION:-2020.2}"
-container_project_root="${TIMEPIECER_CONTAINER_ROOT:-/home/user/git/Timepiecer-main}"
 top_name="${TOP_NAME:-timepiecer}"
 board_name="${OPENFPGA_BOARD:-basys3}"
 build_only=0
@@ -40,11 +39,6 @@ done
 
 host_synth_dcp="$project_root/Timepiecer.runs/synth_1/${top_name}.dcp"
 host_bit="$project_root/Timepiecer.runs/impl_1/${top_name}_nonproject.bit"
-container_synth_dcp="$container_project_root/Timepiecer.runs/synth_1/${top_name}.dcp"
-container_bit="$container_project_root/Timepiecer.runs/impl_1/${top_name}_nonproject.bit"
-container_timing_rpt="$container_project_root/Timepiecer.runs/impl_1/${top_name}_timing_summary_nonproject.rpt"
-container_util_rpt="$container_project_root/Timepiecer.runs/impl_1/${top_name}_utilization_nonproject.rpt"
-container_routed_dcp="$container_project_root/Timepiecer.runs/impl_1/${top_name}_routed_nonproject.dcp"
 
 if ! docker ps --format '{{.Names}}' | grep -Fxq "$container_name"
 then
@@ -52,6 +46,40 @@ then
     echo "Start the 2020.2 Vivado container first." >&2
     exit 1
 fi
+
+if [[ -n "${TIMEPIECER_CONTAINER_ROOT:-}" ]]
+then
+    container_project_root="$TIMEPIECER_CONTAINER_ROOT"
+else
+    container_project_root="$(docker exec "$container_name" bash -lc '
+for d in \
+    /home/user/git/Timepiecer \
+    /home/user/git/Timepiecer-main \
+    /home/user/git/Timerpiece \
+    /home/user/git/TimerPiece \
+    /home/user/git/TimerPiece-main
+do
+    if [ -f "$d/Timepiecer.srcs/sources_1/new/common_control.v" ]; then
+        printf "%s" "$d"
+        exit 0
+    fi
+done
+exit 1
+')"
+fi
+
+if [[ -z "${container_project_root:-}" ]]
+then
+    echo "Unable to locate project root inside container." >&2
+    echo "Set TIMEPIECER_CONTAINER_ROOT explicitly if needed." >&2
+    exit 1
+fi
+
+container_synth_dcp="$container_project_root/Timepiecer.runs/synth_1/${top_name}.dcp"
+container_bit="$container_project_root/Timepiecer.runs/impl_1/${top_name}_nonproject.bit"
+container_timing_rpt="$container_project_root/Timepiecer.runs/impl_1/${top_name}_timing_summary_nonproject.rpt"
+container_util_rpt="$container_project_root/Timepiecer.runs/impl_1/${top_name}_utilization_nonproject.rpt"
+container_routed_dcp="$container_project_root/Timepiecer.runs/impl_1/${top_name}_routed_nonproject.dcp"
 
 docker exec "$container_name" bash -lc "
 set -euo pipefail

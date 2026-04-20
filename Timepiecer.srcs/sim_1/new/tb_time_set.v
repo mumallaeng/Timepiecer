@@ -169,18 +169,17 @@ module tb_time_set ();
         i_time_24 = 2'b00;
         expect_set_time(5'd1, 6'd22, 6'd44, 7'd77);
 
-        // 7) shift 후에는 편집 단위가 SEC -> MSEC으로 넘어가야 하므로
-        //    hour -> min -> sec -> msec 순서를 맞추기 위해 hour부터 다시 진입함.
+        // 7) 현재 구현에서는 FSM이 i_set_index를 직접 넘겨주므로
+        //    TB에서도 편집 단위를 직접 바꿔가며 검증함.
         i_set_mode = 1'b0;
         i_time_24 = 2'b00;
         i_live_time = {5'd10, 6'd22, 6'd44, 7'd77};
         expect_set_time(5'd10, 6'd22, 6'd44, 7'd77);
 
-        i_set_index = UNIT_HOUR;
+        i_set_index = UNIT_MIN;
         i_set_mode = 1'b1;
         expect_set_time(5'd10, 6'd22, 6'd44, 7'd77);
 
-        pulse_shift;  // HOUR -> MIN
         pulse_increment;  // MIN +1
         expect_set_time(5'd10, 6'd23, 6'd44, 7'd77);
 
@@ -241,9 +240,8 @@ module tb_time_set ();
         pulse_increment_tens;
         expect_set_time(5'd4, 6'd2, 6'd3, 7'd95);
 
-        pulse_shift;
-        pulse_shift;
-        pulse_shift;  // HOUR -> MIN -> SEC -> MSEC
+        i_set_index = UNIT_MSEC;
+        @(negedge clk);
         pulse_increment_tens;
         expect_set_time(5'd4, 6'd2, 6'd3, 7'd5);
 
