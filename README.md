@@ -1,29 +1,26 @@
 # Timerpiece
 Verilog Watch Project: Timepiece and Timer
 
-## Stopwatch Reference Import
+## Project Layout
 
-The repo includes the stopwatch reference HDL listed in
-`docs/10-implementation-and-simulation-plan.md`, plus a checked-in Vivado
-project file for the stopwatch reference flow.
+- Main project HDL: `Timerpiece.srcs/sources_1/new/`
+- Imported reference HDL: `Timerpiece.srcs/sources_1/imports/stopwatch_watch/`
+- Simulation sources: `Timerpiece.srcs/sim_1/new/`
+- Vivado project: `Timerpiece.xpr`
 
-Imported files live under:
+## Docs
 
-- `Timerpiece.srcs/sources_1/new/`
-- `Timerpiece.srcs/sources_1/imports/10000_counter/`
-- `Timerpiece.srcs/sources_1/imports/stopwatch_watch/`
-- `Timerpiece.srcs/sim_1/imports/new/`
-- `Timerpiece.srcs/sim_1/new/`
+Design/report docs are managed in Vault.
 
-You can open the checked-in project directly:
+- `~/git/Vault/activities/korcham/notes/verilog-hdl/reports/watch-project-timepiece-timer/`
 
-- `Timerpiece.xpr`
+## Vivado Tcl
 
-Or recreate the stopwatch reference project with Tcl:
+You can recreate a local timerpiece reference project with Tcl:
 
 ```tcl
-source vivado/create_stopwatch_reference_project.tcl
+source vivado/create_timerpiece_project.tcl
 ```
 
-The script creates a local project under `.vivado/stopwatch_reference/` so the
+The script creates a local project under `.vivado/timerpiece_reference/` so the
 tracked repo files stay clean.
