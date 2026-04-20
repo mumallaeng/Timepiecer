@@ -11,6 +11,7 @@ module tb_time_set ();
     reg i_increment_tens;
     reg i_decrement;
     reg i_decrement_tens;
+    reg [1:0] i_time_24;
     reg [23:0] i_live_time;
     wire [23:0] o_set_time;
 
@@ -29,6 +30,7 @@ module tb_time_set ();
         .i_increment_tens(i_increment_tens),
         .i_decrement(i_decrement),
         .i_decrement_tens(i_decrement_tens),
+        .i_time_24(i_time_24),
         .i_live_time(i_live_time),
         .o_set_time(o_set_time)
     );
@@ -109,6 +111,7 @@ module tb_time_set ();
         i_increment_tens = 1'b0;
         i_decrement = 1'b0;
         i_decrement_tens = 1'b0;
+        i_time_24 = 2'b00;
         i_live_time = 24'd0;
 
         // reset 해제 후부터 본격 테스트 시작
@@ -145,9 +148,31 @@ module tb_time_set ();
         pulse_decrement_tens;
         expect_set_time(5'd10, 6'd22, 6'd44, 7'd77);
 
-        // 6) shift 후에는 편집 단위가 SEC -> MSEC으로 넘어가야 하므로
+        // 6) set 모드 중에도 24h -> 12h -> 24h 전환이 즉시 반영되어야 함.
+        i_set_mode = 1'b0;
+        i_live_time = {5'd23, 6'd22, 6'd44, 7'd77};
+        expect_set_time(5'd23, 6'd22, 6'd44, 7'd77);
+
+        i_set_index = UNIT_HOUR;
+        i_set_mode = 1'b1;
+        expect_set_time(5'd23, 6'd22, 6'd44, 7'd77);
+
+        i_time_24 = 2'b01;
+        expect_set_time(5'd11, 6'd22, 6'd44, 7'd77);
+
+        pulse_increment;
+        expect_set_time(5'd12, 6'd22, 6'd44, 7'd77);
+
+        pulse_increment;
+        expect_set_time(5'd1, 6'd22, 6'd44, 7'd77);
+
+        i_time_24 = 2'b00;
+        expect_set_time(5'd1, 6'd22, 6'd44, 7'd77);
+
+        // 7) shift 후에는 편집 단위가 SEC -> MSEC으로 넘어가야 하므로
         //    hour -> min -> sec -> msec 순서를 맞추기 위해 hour부터 다시 진입함.
         i_set_mode = 1'b0;
+        i_time_24 = 2'b00;
         i_live_time = {5'd10, 6'd22, 6'd44, 7'd77};
         expect_set_time(5'd10, 6'd22, 6'd44, 7'd77);
 
@@ -159,7 +184,7 @@ module tb_time_set ();
         pulse_increment;  // MIN +1
         expect_set_time(5'd10, 6'd23, 6'd44, 7'd77);
 
-        // 7) MIN 단위에서 59 -> 0, 0 -> 59 wrap 동작 확인함.
+        // 8) MIN 단위에서 59 -> 0, 0 -> 59 wrap 동작 확인함.
         i_set_mode = 1'b0;
         i_live_time = {5'd10, 6'd59, 6'd44, 7'd77};
         expect_set_time(5'd10, 6'd59, 6'd44, 7'd77);
@@ -174,7 +199,7 @@ module tb_time_set ();
         pulse_decrement;
         expect_set_time(5'd10, 6'd59, 6'd44, 7'd77);
 
-        // 8) HOUR 단위에서 23 -> 0, 0 -> 23 wrap 동작 확인함.
+        // 9) HOUR 단위에서 23 -> 0, 0 -> 23 wrap 동작 확인함.
         i_set_mode = 1'b0;
         i_live_time = {5'd23, 6'd10, 6'd20, 7'd30};
         expect_set_time(5'd23, 6'd10, 6'd20, 7'd30);
@@ -189,7 +214,7 @@ module tb_time_set ();
         pulse_decrement;
         expect_set_time(5'd23, 6'd10, 6'd20, 7'd30);
 
-        // 9) MSEC 단위에서 99 -> 0, 0 -> 99 wrap 동작 확인함.
+        // 10) MSEC 단위에서 99 -> 0, 0 -> 99 wrap 동작 확인함.
         i_set_mode = 1'b0;
         i_live_time = {5'd1, 6'd2, 6'd3, 7'd99};
         expect_set_time(5'd1, 6'd2, 6'd3, 7'd99);
@@ -204,7 +229,7 @@ module tb_time_set ();
         pulse_decrement;
         expect_set_time(5'd1, 6'd2, 6'd3, 7'd99);
 
-        // 10) hour와 msec의 tens 편집도 wrap 포함해 동작하는지 확인함.
+        // 11) hour와 msec의 tens 편집도 wrap 포함해 동작하는지 확인함.
         i_set_mode = 1'b0;
         i_live_time = {5'd18, 6'd2, 6'd3, 7'd95};
         expect_set_time(5'd18, 6'd2, 6'd3, 7'd95);

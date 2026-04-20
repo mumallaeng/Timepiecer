@@ -8,7 +8,8 @@ module time_set_module #(
     parameter integer MSEC_TIMES = 100,
     parameter integer SEC_TIMES  = 60,
     parameter integer MIN_TIMES  = 60,
-    parameter integer HOUR_TIMES = 24
+    parameter integer HOUR_TIMES = 24,
+    parameter integer INIT_HOUR  = 12
 ) (
     input clk,
     input rst,
@@ -19,8 +20,10 @@ module time_set_module #(
     input i_increment_tens,
     input i_decrement,
     input i_decrement_tens,
+    input [1:0] i_time_24,
     input [23:0] i_live_time,
-    output [23:0] o_set_time
+    output [23:0] o_set_time,
+    output [23:0] o_set_time_load
 );
 
     localparam MSEC_LSB = 0;
@@ -61,6 +64,8 @@ module time_set_module #(
     wire [SEC_WIDTH-1:0] live_sec;
     wire [MIN_WIDTH-1:0] live_min;
     wire [HOUR_WIDTH-1:0] live_hour;
+    wire [HOUR_WIDTH-1:0] set_display_hour;
+    wire is_12_hour;
 
     function [1:0] next_unit;
         input [1:0] current_unit;
@@ -167,7 +172,20 @@ module time_set_module #(
     assign live_min  = i_live_time[MIN_MSB:MIN_LSB];
     assign live_hour = i_live_time[HOUR_MSB:HOUR_LSB];
 
-    assign o_set_time = {set_hour_reg, set_min_reg, set_sec_reg, set_msec_reg};
+    // 현재 프로젝트에서는 i_time_24의 LSB를 12h/24h 선택 비트로 사용
+    assign is_12_hour = i_time_24[0];
+
+    // load용 버스는 항상 내부 24시간제 값을 그대로 사용
+    assign o_set_time_load = {set_hour_reg, set_min_reg, set_sec_reg, set_msec_reg};
+
+    // 표시용 버스는 12시간제 선택 시 hour만 변환해서 내보냄
+    assign set_display_hour =
+        (!is_12_hour)               ? set_hour_reg :
+        (set_hour_reg == 5'd0)      ? 5'd12 :
+        (set_hour_reg <= 5'd12)     ? set_hour_reg :
+                                      set_hour_reg - 5'd12;
+
+    assign o_set_time = {set_display_hour, set_min_reg, set_sec_reg, set_msec_reg};
 
     always @(posedge clk or posedge rst) begin
         if (rst) begin  // reset이면 설정 버스와 set index 초기화
@@ -176,7 +194,7 @@ module time_set_module #(
             set_msec_reg   <= 0;
             set_sec_reg    <= 0;
             set_min_reg    <= 0;
-            set_hour_reg   <= 0;
+            set_hour_reg   <= INIT_HOUR[HOUR_WIDTH-1:0];
         end else begin  // 평소에는 설정 버스와 set index 업데이트
             set_index_reg  <= set_index_next;
             set_mode_d_reg <= i_set_mode;
