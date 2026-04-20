@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module display_select #(
+module display_select_logic #(
     parameter MSEC_WIDTH = 7,
     parameter SEC_WIDTH  = 6,
     parameter MIN_WIDTH  = 6,

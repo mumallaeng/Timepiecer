@@ -266,56 +266,6 @@ module timepiece_unit #(
 
 endmodule
 
-module display_select_logic #(
-    parameter MSEC_WIDTH = 7,
-    parameter SEC_WIDTH  = 6,
-    parameter MIN_WIDTH  = 6,
-    parameter HOUR_WIDTH = 5
-) (
-    input [MSEC_WIDTH-1:0] i_timer_msec,
-    input [SEC_WIDTH-1:0] i_timer_sec,
-    input [MIN_WIDTH-1:0] i_timer_min,
-    input [HOUR_WIDTH-1:0] i_timer_hour,
-    input [MSEC_WIDTH-1:0] i_timepiece_msec,
-    input [SEC_WIDTH-1:0] i_timepiece_sec,
-    input [MIN_WIDTH-1:0] i_timepiece_min,
-    input [HOUR_WIDTH-1:0] i_timepiece_hour,
-    input i_sw0,
-    input i_sw15,
-    output [MSEC_WIDTH-1:0] o_display_msec,
-    output [SEC_WIDTH-1:0] o_display_sec,
-    output [MIN_WIDTH-1:0] o_display_min,
-    output [HOUR_WIDTH-1:0] o_display_hour,
-    output o_led_12_hour,
-    output o_led_timer
-);
-
-    display_select #(
-        .MSEC_WIDTH(MSEC_WIDTH),
-        .SEC_WIDTH(SEC_WIDTH),
-        .MIN_WIDTH(MIN_WIDTH),
-        .HOUR_WIDTH(HOUR_WIDTH)
-    ) U_DISPLAY_SELECT (
-        .i_timer_msec(i_timer_msec),
-        .i_timer_sec(i_timer_sec),
-        .i_timer_min(i_timer_min),
-        .i_timer_hour(i_timer_hour),
-        .i_timepiece_msec(i_timepiece_msec),
-        .i_timepiece_sec(i_timepiece_sec),
-        .i_timepiece_min(i_timepiece_min),
-        .i_timepiece_hour(i_timepiece_hour),
-        .i_sw0(i_sw0),
-        .i_sw15(i_sw15),
-        .o_display_msec(o_display_msec),
-        .o_display_sec(o_display_sec),
-        .o_display_min(o_display_min),
-        .o_display_hour(o_display_hour),
-        .o_led_12_hour(o_led_12_hour),
-        .o_led_timer(o_led_timer)
-    );
-
-endmodule
-
 module display_unit #(
     parameter MAIN_CLK_100MHZ = 100_000_000,
     parameter SCAN_HZ         = 1000,
