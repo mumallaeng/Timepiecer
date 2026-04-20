@@ -10,14 +10,14 @@ module tb_input_conitioning ();
     reg  btnR;
     reg  sw0;
     reg  sw15;
-    wire o_btn_U;
-    wire o_btn_D;
-    wire o_btn_L;
-    wire o_btn_R;
-    wire o_btn_U_hold;
-    wire o_btn_D_hold;
-    wire o_btn_L_hold;
-    wire o_btn_R_hold;
+    wire o_btnU;
+    wire o_btnD;
+    wire o_btnL;
+    wire o_btnR;
+    wire o_btnU_hold;
+    wire o_btnD_hold;
+    wire o_btnL_hold;
+    wire o_btnR_hold;
     wire o_sw0;
     wire o_sw15;
 
@@ -34,14 +34,14 @@ module tb_input_conitioning ();
         .btnR(btnR),
         .sw0(sw0),
         .sw15(sw15),
-        .o_btn_U(o_btn_U),
-        .o_btn_D(o_btn_D),
-        .o_btn_L(o_btn_L),
-        .o_btn_R(o_btn_R),
-        .o_btn_U_hold(o_btn_U_hold),
-        .o_btn_D_hold(o_btn_D_hold),
-        .o_btn_L_hold(o_btn_L_hold),
-        .o_btn_R_hold(o_btn_R_hold),
+        .o_btnU(o_btnU),
+        .o_btnD(o_btnD),
+        .o_btnL(o_btnL),
+        .o_btnR(o_btnR),
+        .o_btnU_hold(o_btnU_hold),
+        .o_btnD_hold(o_btnD_hold),
+        .o_btnL_hold(o_btnL_hold),
+        .o_btnR_hold(o_btnR_hold),
         .o_sw0(o_sw0),
         .o_sw15(o_sw15)
     );

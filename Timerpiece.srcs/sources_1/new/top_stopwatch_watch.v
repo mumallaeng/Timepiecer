@@ -7,7 +7,8 @@ module top_stopwatch_watch (
     input btnL,
     input btnU,
     input btnD,
-    input [2:0] sw,
+    input sw0,
+    input sw15,
     output [3:0] fnd_com,
     output [7:0] fnd_data,
     output [1:0] led
@@ -33,7 +34,40 @@ module top_stopwatch_watch (
     wire w_btnL;
     wire w_btnU;
     wire w_btnD;
+    wire w_btnR_hold;
+    wire w_btnL_hold;
+    wire w_btnU_hold;
+    wire w_btnD_hold;
+    wire w_sw0;
+    wire w_sw15;
 
+
+    input_conditioning #(
+        .CLK_FREQ_HZ(100_000_000),  // 100MHz
+        .BD_HZ      (100_000),      // 100kHz
+        .HOLD_TIME  (100_000_000)   // 1초
+    ) U_BUTTON_EVENT_DECODER (
+        .clk(clk),
+        .rst(rst),
+        .btnU(btnU),
+        .btnD(btnD),
+        .btnL(btnL),
+        .btnR(btnR),
+        .sw0(w_sw0),
+        .sw15(w_sw15),
+        .o_btn_U(w_btnR),
+        .o_btn_D(w_btnL),
+        .o_btn_L(w_btnU),
+        .o_btn_R(w_btnD),
+        .o_btn_U_hold(w_btnR_hold),
+        .o_btn_D_hold(w_btnL_hold),
+        .o_btn_L_hold(w_btnU_hold),
+        .o_btn_R_hold(w_btnD_hold),
+        .o_sw0(w_sw0),
+        .o_sw15(w_sw15)
+    );
+
+    /*
     button_debounce U_BTN_R (
         .clk(clk),
         .rst(rst),
@@ -69,6 +103,7 @@ module top_stopwatch_watch (
         .o_btn_level(),
         .o_btn_tick(w_btnD)
     );
+    */
 
     control_unit U_CONTROL_UNIT (
         .clk(clk),

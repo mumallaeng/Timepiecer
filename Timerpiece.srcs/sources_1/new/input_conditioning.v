@@ -13,14 +13,14 @@ module input_conditioning #(
     input  btnR,
     input  sw0,
     input  sw15,
-    output o_btn_U,
-    output o_btn_D,
-    output o_btn_L,
-    output o_btn_R,
-    output o_btn_U_hold,
-    output o_btn_D_hold,
-    output o_btn_L_hold,
-    output o_btn_R_hold,
+    output o_btnU,
+    output o_btnD,
+    output o_btnL,
+    output o_btnR,
+    output o_btnU_hold,
+    output o_btnD_hold,
+    output o_btnL_hold,
+    output o_btnR_hold,
     output o_sw0,
     output o_sw15
 );
@@ -36,8 +36,8 @@ module input_conditioning #(
         .clk       (clk),
         .rst       (rst),
         .i_btn     (btnU),
-        .o_btn     (o_btn_U),
-        .o_btn_hold(o_btn_U_hold)
+        .o_btn     (o_btnU),
+        .o_btn_hold(o_btnU_hold)
     );
 
     debouncer #(
@@ -48,8 +48,8 @@ module input_conditioning #(
         .clk       (clk),
         .rst       (rst),
         .i_btn     (btnD),
-        .o_btn     (o_btn_D),
-        .o_btn_hold(o_btn_D_hold)
+        .o_btn     (o_btnD),
+        .o_btn_hold(o_btnD_hold)
     );
 
     debouncer #(
@@ -60,8 +60,8 @@ module input_conditioning #(
         .clk       (clk),
         .rst       (rst),
         .i_btn     (btnL),
-        .o_btn     (o_btn_L),
-        .o_btn_hold(o_btn_L_hold)
+        .o_btn     (o_btnL),
+        .o_btn_hold(o_btnL_hold)
     );
 
     debouncer #(
@@ -72,8 +72,8 @@ module input_conditioning #(
         .clk       (clk),
         .rst       (rst),
         .i_btn     (btnR),
-        .o_btn     (o_btn_R),
-        .o_btn_hold(o_btn_R_hold)
+        .o_btn     (o_btnR),
+        .o_btn_hold(o_btnR_hold)
     );
 
 
