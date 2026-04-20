@@ -1,103 +1,87 @@
 `timescale 1ns / 1ps
 
-
-
-
-
 module debouncer #(
-    parameter CLK_FREQ_HZ = 100_000_000,  // 100MHz
-    parameter BD_HZ = 100_000,
-    parameter HOLD_TIME = 100_000_000  // 1.5초
+    parameter CLK_FREQ_HZ = 100_000_000,
+    parameter BD_HZ       = 100_000,
+    parameter HOLD_TIME   = 100_000_000
 ) (
     input clk,
     input rst,
     input i_btn,
-
-    output     o_btn,      // 최초 1회 펄스
-    output reg o_btn_hold  // 1.5초마다 반복 펄스
+    output reg o_btn,
+    output reg o_btn_hold
 );
 
-    parameter COUNT = CLK_FREQ_HZ / BD_HZ;
-    reg [$clog2(COUNT)-1:0] count_reg;
-    reg clk_100khz;
+    localparam integer SAMPLE_COUNT = CLK_FREQ_HZ / BD_HZ;
 
+    reg [$clog2(SAMPLE_COUNT)-1:0] sample_count_reg;
+    reg sample_tick;
+    reg [7:0] sync_reg;
+    reg btn_db_reg;
+    reg btn_db_d_reg;
+    reg [31:0] hold_count_reg;
+    reg hold_fired_reg;
 
-    //100kHz 주파수 생성
-    always @(posedge clk, posedge rst) begin
-        if (rst) begin
-            count_reg  <= 0;
-            clk_100khz <= 0;
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin  // debounce sample tick 초기화
+            sample_count_reg <= 0;
+            sample_tick      <= 1'b0;
+        end else if (sample_count_reg == SAMPLE_COUNT - 1) begin
+            sample_count_reg <= 0;
+            sample_tick      <= 1'b1;
         end else begin
-            count_reg <= count_reg + 1;
-            if (count_reg == COUNT - 1) begin
-                count_reg  <= 0;
-                clk_100khz <= 1;
-            end else begin
-                clk_100khz <= 0;
+            sample_count_reg <= sample_count_reg + 1'b1;
+            sample_tick      <= 1'b0;
+        end
+    end
+
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin  // 샘플 히스토리와 stable button 상태 초기화
+            sync_reg   <= 8'b0;
+            btn_db_reg <= 1'b0;
+        end else if (sample_tick) begin
+            sync_reg <= {sync_reg[6:0], i_btn};
+
+            if (&{sync_reg[6:0], i_btn}) begin
+                btn_db_reg <= 1'b1;
+            end else if (~|{sync_reg[6:0], i_btn}) begin
+                btn_db_reg <= 1'b0;
             end
-
         end
     end
-
-    // 디바운싱
-    reg [7:0] sync_reg, sync_next;
-
-    always @(posedge clk_100khz, posedge rst) begin
-        if (rst) begin
-            sync_reg <= 0;
-        end else begin
-            sync_reg <= sync_next;
-        end
-    end
-
-
-    always @(*) begin
-        sync_next <= {sync_reg[6:0], i_btn};
-    end
-
-    wire btn_db;
-
-    assign btn_db = &sync_reg;
-
-
-    // 2. edge detect (최초 1회)
-
-    reg btn_db_d;
 
     always @(posedge clk or posedge rst) begin
-        if (rst) begin
-            btn_db_d <= 0;
+        if (rst) begin  // edge/hold 관련 레지스터와 출력 초기화
+            btn_db_d_reg  <= 1'b0;
+            hold_count_reg <= 32'd0;
+            hold_fired_reg <= 1'b0;
+            o_btn         <= 1'b0;
+            o_btn_hold    <= 1'b0;
         end else begin
-            btn_db_d <= btn_db;  // rising edge
-        end
-    end
+            btn_db_d_reg <= btn_db_reg;
+            o_btn        <= 1'b0;
+            o_btn_hold   <= 1'b0;
 
-    assign o_btn = btn_db & (~btn_db_d);
-
-    // hold counter 
-    // 1.5초
-
-    reg [31:0] cnt;
-
-    always @(posedge clk or posedge rst) begin
-        if (rst) begin
-            cnt <= 0;
-            o_btn_hold <= 0;
-        end else begin
-            if (btn_db) begin
-                if (cnt == HOLD_TIME - 1) begin
-                    cnt <= 0;
-                    o_btn_hold <= 1;  // 1클럭 펄스
-                end else begin
-                    cnt <= cnt + 1;
-                    o_btn_hold <= 0;
+            if (btn_db_reg) begin  // 안정적으로 눌린 상태이면 hold 카운트 진행
+                if (!hold_fired_reg) begin
+                    if (hold_count_reg == HOLD_TIME - 1) begin
+                        hold_count_reg <= 32'd0;
+                        hold_fired_reg <= 1'b1;
+                        o_btn_hold     <= 1'b1;
+                    end else begin
+                        hold_count_reg <= hold_count_reg + 1'b1;
+                    end
                 end
             end else begin
-                cnt        <= 0;  // 버튼 떼면 리셋
-                o_btn_hold <= 0;
+                // release edge에서 hold가 발생하지 않았으면 short 이벤트 1회 출력
+                if (btn_db_d_reg && !hold_fired_reg) begin
+                    o_btn <= 1'b1;
+                end
+
+                hold_count_reg <= 32'd0;
+                hold_fired_reg <= 1'b0;
             end
         end
     end
 
 endmodule
-

@@ -1,6 +1,8 @@
 `timescale 1ns / 1ps
 
 module timepiece_datapath #(
+    parameter integer CLK_FREQ_HZ = 100_000_000,
+    parameter integer TICK_HZ     = 100,
     parameter integer MSEC_TIMES = 100,
     parameter integer SEC_TIMES  = 60,
     parameter integer MIN_TIMES  = 60,
@@ -104,13 +106,16 @@ module timepiece_datapath #(
         .o_set_time_load(w_set_time_load)
     );
 
-    tick_gen_100hz U_TICK_GEN_100HZ (
+    timepiece_tick_gen_100hz #(
+        .CLK_FREQ_HZ(CLK_FREQ_HZ),
+        .TICK_HZ(TICK_HZ)
+    ) U_TICK_GEN_100HZ (
         .clk(clk),
         .rst(rst),
         .o_tick_100hz(w_tick_100hz)
     );
 
-    tick_counter #(
+    timepiece_tick_counter #(
         .TIMES(MSEC_TIMES),
         .BIT_WIDTH(MSEC_WIDTH),
         .INIT_VALUE(0)
@@ -124,7 +129,7 @@ module timepiece_datapath #(
         .o_tick(w_sec_tick)
     );
 
-    tick_counter #(
+    timepiece_tick_counter #(
         .TIMES(SEC_TIMES),
         .BIT_WIDTH(SEC_WIDTH),
         .INIT_VALUE(0)
@@ -138,7 +143,7 @@ module timepiece_datapath #(
         .o_tick(w_min_tick)
     );
 
-    tick_counter #(
+    timepiece_tick_counter #(
         .TIMES(MIN_TIMES),
         .BIT_WIDTH(MIN_WIDTH),
         .INIT_VALUE(0)
@@ -152,7 +157,7 @@ module timepiece_datapath #(
         .o_tick(w_hour_tick)
     );
 
-    tick_counter #(
+    timepiece_tick_counter #(
         .TIMES(HOUR_TIMES),
         .BIT_WIDTH(HOUR_WIDTH),
         .INIT_VALUE(INIT_HOUR)
@@ -167,7 +172,7 @@ module timepiece_datapath #(
     );
 endmodule
 
-module tick_counter #(
+module timepiece_tick_counter #(
     parameter integer TIMES = 100,
     parameter integer BIT_WIDTH = 7,
     parameter integer INIT_VALUE = 0
@@ -212,7 +217,7 @@ module tick_counter #(
 
 endmodule
 
-module tick_gen_100hz #(
+module timepiece_tick_gen_100hz #(
     parameter integer CLK_FREQ_HZ = 100_000_000,
     parameter integer TICK_HZ     = 100
 ) (

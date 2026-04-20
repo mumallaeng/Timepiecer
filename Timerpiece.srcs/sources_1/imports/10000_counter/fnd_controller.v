@@ -30,22 +30,55 @@ module fnd_controller #(
     wire [ 2:0] w_digit_sel;
     wire        w_1khz;
     wire        half_sec_sig;
+    wire [3:0]  w_msec_digit_1_disp, w_msec_digit_10_disp;
+    wire [3:0]  w_sec_digit_1_disp, w_sec_digit_10_disp;
+    wire [3:0]  w_min_digit_1_disp, w_min_digit_10_disp;
+    wire [3:0]  w_hour_digit_1_disp, w_hour_digit_10_disp;
 
     //dat 표현을 위한 
     reg  [15:0] dot_index;
     wire [3:0] dot_hour, dot_min, dot_sec, dot_msec;
+    reg blink_msec, blink_sec, blink_min, blink_hour;
 
     assign {dot_hour, dot_min, dot_sec, dot_msec} = dot_index;
 
+    assign w_msec_digit_1_disp  = blink_msec ? 4'hf : w_msec_digit_1;
+    assign w_msec_digit_10_disp = blink_msec ? 4'hf : w_msec_digit_10;
+    assign w_sec_digit_1_disp   = blink_sec  ? 4'hf : w_sec_digit_1;
+    assign w_sec_digit_10_disp  = blink_sec  ? 4'hf : w_sec_digit_10;
+    assign w_min_digit_1_disp   = blink_min  ? 4'hf : w_min_digit_1;
+    assign w_min_digit_10_disp  = blink_min  ? 4'hf : w_min_digit_10;
+    assign w_hour_digit_1_disp  = blink_hour ? 4'hf : w_hour_digit_1;
+    assign w_hour_digit_10_disp = blink_hour ? 4'hf : w_hour_digit_10;
+
 
     always @(*) begin
-        case (i_set_index)
-            2'b00:   dot_index = {4'hf, 4'hf, 4'hf, {3'b111, half_sec_sig}};
-            2'b01:   dot_index = {4'hf, 4'hf, {3'b111, half_sec_sig}, 4'hf};
-            2'b10:   dot_index = {4'hf, {3'b111, half_sec_sig}, 4'hf, 4'hf};
-            2'b11:   dot_index = {{3'b111, half_sec_sig}, 4'hf, 4'hf, 4'hf};
-            default: dot_index = {4'hf, 4'hf, 4'hf, 4'hf};
-        endcase
+        // 기본적으로 현재 표시 모드의 ':'를 항상 켜 둠
+        if (i_display_mode) begin
+            dot_index = {4'he, 4'he, 4'hf, 4'hf};  // HH:MM
+        end else begin
+            dot_index = {4'hf, 4'hf, 4'he, 4'he};  // SS:MS
+        end
+    end
+
+    always @(*) begin
+        blink_msec = 1'b0;
+        blink_sec  = 1'b0;
+        blink_min  = 1'b0;
+        blink_hour = 1'b0;
+
+        // set 모드에서는 현재 선택 단위만 half_sec_sig 기준으로 깜빡이게 함
+        if (i_set_index != 3'b111 && half_sec_sig) begin
+            case (i_set_index[1:0])
+                2'b00:   blink_hour = 1'b1;
+                2'b01:   blink_min  = 1'b1;
+                2'b10:   blink_sec  = 1'b1;
+                2'b11:   blink_msec = 1'b1;
+                default: begin
+                    blink_msec = 1'b0;
+                end
+            endcase
+        end
     end
 
     //digit split
@@ -82,10 +115,10 @@ module fnd_controller #(
     );
 
     mux_8x1 U_MUX_MSEC_SEC (
-        .in0    (w_msec_digit_1),     // digit 1
-        .in1    (w_msec_digit_10),    // digit 10
-        .in2    (w_sec_digit_1),      // digit 100
-        .in3    (w_sec_digit_10),     // digit 1000
+        .in0    (w_msec_digit_1_disp),     // digit 1
+        .in1    (w_msec_digit_10_disp),    // digit 10
+        .in2    (w_sec_digit_1_disp),      // digit 100
+        .in3    (w_sec_digit_10_disp),     // digit 1000
         .in4    (dot_msec),           // digit 1
         .in5    (4'hf),               // digit 10
         .in6    (dot_sec),            // digit 100
@@ -95,10 +128,10 @@ module fnd_controller #(
     );
 
     mux_8x1 U_MUX_MIN_HOUR (
-        .in0    (w_min_digit_1),      // digit 1
-        .in1    (w_min_digit_10),     // digit 10
-        .in2    (w_hour_digit_1),     // digit 100
-        .in3    (w_hour_digit_10),    // digit 1000
+        .in0    (w_min_digit_1_disp),      // digit 1
+        .in1    (w_min_digit_10_disp),     // digit 10
+        .in2    (w_hour_digit_1_disp),     // digit 100
+        .in3    (w_hour_digit_10_disp),    // digit 1000
         .in4    (dot_min),
         .in5    (4'hf),
         .in6    (dot_hour),
