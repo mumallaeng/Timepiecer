@@ -9,7 +9,8 @@ module time_set_module #(
     parameter integer SEC_TIMES  = 60,
     parameter integer MIN_TIMES  = 60,
     parameter integer HOUR_TIMES = 24,
-    parameter integer INIT_HOUR  = 12
+    parameter integer INIT_HOUR  = 13,
+    parameter integer INIT_MIN   = 59
 ) (
     input clk,
     input rst,
@@ -66,18 +67,6 @@ module time_set_module #(
     wire [HOUR_WIDTH-1:0] live_hour;
     wire [HOUR_WIDTH-1:0] set_display_hour;
     wire is_12_hour;
-
-    function [1:0] next_unit;
-        input [1:0] current_unit;
-    begin
-        case (current_unit)
-            UNIT_HOUR: next_unit = UNIT_MIN;
-            UNIT_MIN:  next_unit = UNIT_SEC;
-            UNIT_SEC:  next_unit = UNIT_MSEC;
-            default:   next_unit = UNIT_HOUR;
-        endcase
-    end
-    endfunction
 
     function [MSEC_WIDTH-1:0] wrap_add_msec;
         input [MSEC_WIDTH-1:0] value;
@@ -193,7 +182,7 @@ module time_set_module #(
             set_mode_d_reg <= 1'b0;
             set_msec_reg   <= 0;
             set_sec_reg    <= 0;
-            set_min_reg    <= 0;
+            set_min_reg    <= INIT_MIN[MIN_WIDTH-1:0];
             set_hour_reg   <= INIT_HOUR[HOUR_WIDTH-1:0];
         end else begin  // 평소에는 설정 버스와 set index 업데이트
             set_index_reg  <= set_index_next;
@@ -227,9 +216,10 @@ module time_set_module #(
             set_min_next   = live_min;
             set_hour_next  = live_hour;
         end else if (i_index_shift) begin
-            // INDEX_SHIFT 상태에서 현재 편집 단위를 다음 단위로 이동함.
-            set_index_next = next_unit(set_index_reg);
+            // 현재 편집 단위는 FSM이 결정하므로 그대로 따라감.
+            set_index_next = i_set_index;
         end else if (i_increment) begin
+            set_index_next = i_set_index;
             // increment 펄스가 들어오면 현재 선택 단위만 1 증가시킴.
             case (set_index_reg)
                 UNIT_HOUR: set_hour_next = wrap_add_hour(set_hour_reg, 1);
@@ -241,6 +231,7 @@ module time_set_module #(
                 end
             endcase
         end else if (i_increment_tens) begin
+            set_index_next = i_set_index;
             // hold increment 펄스가 들어오면 현재 선택 단위만 10 증가시킴.
             case (set_index_reg)
                 UNIT_HOUR: set_hour_next = wrap_add_hour(set_hour_reg, TENS_STEP);
@@ -252,6 +243,7 @@ module time_set_module #(
                 end
             endcase
         end else if (i_decrement) begin
+            set_index_next = i_set_index;
             // decrement 펄스가 들어오면 현재 선택 단위만 1 감소시킴.
             case (set_index_reg)
                 UNIT_HOUR: set_hour_next = wrap_sub_hour(set_hour_reg, 1);
@@ -263,6 +255,7 @@ module time_set_module #(
                 end
             endcase
         end else if (i_decrement_tens) begin
+            set_index_next = i_set_index;
             // hold decrement 펄스가 들어오면 현재 선택 단위만 10 감소시킴.
             case (set_index_reg)
                 UNIT_HOUR: set_hour_next = wrap_sub_hour(set_hour_reg, TENS_STEP);
@@ -273,6 +266,9 @@ module time_set_module #(
                     set_msec_next = set_msec_reg;
                 end
             endcase
+        end else begin
+            // 입력이 없는 set 상태에서도 현재 편집 단위는 FSM 출력과 동기화함.
+            set_index_next = i_set_index;
         end
     end
 

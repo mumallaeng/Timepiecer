@@ -11,7 +11,8 @@ module timepiece_datapath #(
     parameter integer SEC_WIDTH  = 6,
     parameter integer MIN_WIDTH  = 6,
     parameter integer HOUR_WIDTH = 5,
-    parameter integer INIT_HOUR  = 12
+    parameter integer INIT_HOUR  = 13,
+    parameter integer INIT_MIN   = 59
 ) (
     input clk,
     input rst,
@@ -89,7 +90,8 @@ module timepiece_datapath #(
         .SEC_TIMES(SEC_TIMES),
         .MIN_TIMES(MIN_TIMES),
         .HOUR_TIMES(HOUR_TIMES),
-        .INIT_HOUR(INIT_HOUR)
+        .INIT_HOUR(INIT_HOUR),
+        .INIT_MIN(INIT_MIN)
     ) U_TIME_SET_MODULE (
         .clk(clk),
         .rst(rst),
@@ -146,7 +148,7 @@ module timepiece_datapath #(
     timepiece_tick_counter #(
         .TIMES(MIN_TIMES),
         .BIT_WIDTH(MIN_WIDTH),
-        .INIT_VALUE(0)
+        .INIT_VALUE(INIT_MIN)
     ) U_MIN_COUNTER (
         .clk(clk),
         .rst(rst),

@@ -3,6 +3,7 @@
 module timepiece_fsm (
     input clk,
     input rst,
+    input i_display_mode,
     input i_btnL,
     input i_btnU,
     input i_btnD,
@@ -36,6 +37,35 @@ module timepiece_fsm (
     reg [2:0] next_state;
     reg [1:0] set_index_reg;
     reg [1:0] set_index_next;
+    reg display_mode_d_reg;
+
+    function [1:0] default_unit_for_display;
+        input display_mode;
+    begin
+        if (display_mode) default_unit_for_display = UNIT_HOUR;  // HH:MM
+        else              default_unit_for_display = UNIT_SEC;   // SS:MS
+    end
+    endfunction
+
+    function [1:0] remap_unit_for_display;
+        input [1:0] current_unit;
+        input display_mode;
+    begin
+        if (display_mode) begin
+            case (current_unit)
+                UNIT_SEC:  remap_unit_for_display = UNIT_HOUR;
+                UNIT_MSEC: remap_unit_for_display = UNIT_MIN;
+                default:   remap_unit_for_display = current_unit;
+            endcase
+        end else begin
+            case (current_unit)
+                UNIT_HOUR: remap_unit_for_display = UNIT_SEC;
+                UNIT_MIN:  remap_unit_for_display = UNIT_MSEC;
+                default:   remap_unit_for_display = current_unit;
+            endcase
+        end
+    end
+    endfunction
 
     function [1:0] next_unit;
         input [1:0] current_unit;
@@ -53,9 +83,11 @@ module timepiece_fsm (
         if (rst) begin  // reset이면 기본 표시 상태로 초기화
             current_state <= VIEW;
             set_index_reg <= UNIT_HOUR;
+            display_mode_d_reg <= 1'b1;
         end else begin  // 평소에는 다음 상태로 전이
             current_state <= next_state;
             set_index_reg <= set_index_next;
+            display_mode_d_reg <= i_display_mode;
         end
     end
 
@@ -66,20 +98,22 @@ module timepiece_fsm (
         // sw0가 Timer를 선택하면 Timepiece 설정 상태는 유지하지 않고 VIEW로 복귀
         if (i_sw0) begin
             next_state = VIEW;
-            set_index_next = UNIT_HOUR;
+            set_index_next = default_unit_for_display(i_display_mode);
         end else begin
             case (current_state)
                 VIEW: begin
                     if (i_btnR_hold) begin
                         next_state = SET;                                   // Timepiece가 선택된 상태에서 BtnR hold가 들어오면 설정 모드 진입
-                        set_index_next = UNIT_HOUR;                         // 설정 시작은 hour부터 시작
+                        set_index_next = default_unit_for_display(i_display_mode); // 현재 표시 모드에서 보이는 첫 단위부터 시작
                     end
                 end
 
                 SET: begin
-                    if (i_btnR_hold) begin
+                    if (i_display_mode != display_mode_d_reg) begin
+                        set_index_next = remap_unit_for_display(set_index_reg, i_display_mode); // set 중 HH:MM <-> SS:MS 토글 시 현재 보이는 단위로 remap
+                    end else if (i_btnR_hold) begin
                         next_state = VIEW;                                  // 설정 상태에서 BtnR hold가 들어오면 설정 종료
-                        set_index_next = UNIT_HOUR;
+                        set_index_next = default_unit_for_display(i_display_mode);
                     end else if (i_btnL) begin
                         next_state = INDEX_SHIFT;                           // BtnL은 편집 단위를 다음 단위로 이동
                         set_index_next = next_unit(set_index_reg);

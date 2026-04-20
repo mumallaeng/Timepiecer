@@ -10,7 +10,7 @@ set_property -dict { PACKAGE_PIN R2 IOSTANDARD LVCMOS33 } [get_ports sw15]
 
 ## LEDs
 set_property -dict { PACKAGE_PIN U16 IOSTANDARD LVCMOS33 } [get_ports {led[0]}]
-set_property -dict { PACKAGE_PIN E19 IOSTANDARD LVCMOS33 } [get_ports {led[1]}]
+set_property -dict { PACKAGE_PIN L1 IOSTANDARD LVCMOS33 } [get_ports {led[1]}]
 
 ## Seven-segment display
 set_property -dict { PACKAGE_PIN U2 IOSTANDARD LVCMOS33 } [get_ports {fnd_com[0]}]

@@ -27,6 +27,8 @@ module tb_timepiece ();
     localparam UNIT_MIN  = 2'd1;
     localparam UNIT_SEC  = 2'd2;
     localparam UNIT_MSEC = 2'd3;
+    localparam INIT_HOUR = 5'd13;
+    localparam INIT_MIN  = 6'd59;
 
     // DUT: timepiece 실시간 카운트와 출력 버스를 만드는 모듈
     timepiece_datapath #(
@@ -145,28 +147,28 @@ module tb_timepiece ();
         repeat (3) @(negedge clk);
         rst = 1'b0;
 
-        // 1) reset 직후 Timepiece는 12:00:00.00으로 시작해야 함
-        expect_time(5'd12, 6'd0, 6'd0, 7'd0);
+        // 1) reset 직후 Timepiece는 13:59:00.00으로 시작해야 함
+        expect_time(INIT_HOUR, INIT_MIN, 6'd0, 7'd0);
 
         // 2) 1개의 100Hz tick마다 msec가 1씩 증가해야 함
         wait_msec_steps(1);
-        expect_time(5'd12, 6'd0, 6'd0, 7'd1);
+        expect_time(INIT_HOUR, INIT_MIN, 6'd0, 7'd1);
 
         wait_msec_steps(9);
-        expect_time(5'd12, 6'd0, 6'd0, 7'd10);
+        expect_time(INIT_HOUR, INIT_MIN, 6'd0, 7'd10);
 
         // 3) 100 tick이 지나면 sec가 1 증가하고 msec는 0으로 돌아가야 함
         wait_msec_steps(90);
-        expect_time(5'd12, 6'd0, 6'd1, 7'd0);
+        expect_time(INIT_HOUR, INIT_MIN, 6'd1, 7'd0);
 
         // 4) set_mode가 1이어도 live time은 계속 흘러야 함
         i_set_mode = 1'b1;
         wait_msec_steps(20);
-        expect_time(5'd12, 6'd0, 6'd1, 7'd20);
+        expect_time(INIT_HOUR, INIT_MIN, 6'd1, 7'd20);
 
         // 5) set_mode 진입 순간의 편집 버스는 당시 live time을 기준으로 잡혀야 함
         @(negedge clk);
-        if (o_set_time !== {5'd12, 6'd0, 6'd1, 7'd0}) begin
+        if (o_set_time !== {INIT_HOUR, INIT_MIN, 6'd1, 7'd0}) begin
             $display("FAIL tb_timepiece: o_set_time should capture live time at set entry");
             $fatal;
         end
@@ -174,14 +176,14 @@ module tb_timepiece ();
         // 6) set 모드 중 24h -> 12h -> 24h 전환이 즉시 표시 버스에 반영되어야 함
         i_time_24 = 2'b01;
         @(negedge clk);
-        if (o_set_time !== {5'd12, 6'd0, 6'd1, 7'd0}) begin
+        if (o_set_time !== {5'd1, 6'd59, 6'd1, 7'd0}) begin
             $display("FAIL tb_timepiece: 12-hour display conversion mismatch");
             $fatal;
         end
 
         i_time_24 = 2'b00;
         @(negedge clk);
-        if (o_set_time !== {5'd12, 6'd0, 6'd1, 7'd0}) begin
+        if (o_set_time !== {INIT_HOUR, INIT_MIN, 6'd1, 7'd0}) begin
             $display("FAIL tb_timepiece: 24-hour display restore mismatch");
             $fatal;
         end
@@ -189,26 +191,28 @@ module tb_timepiece ();
         // 7) set 모드에서는 편집 버스가 live time과 분리되어 수정되어야 함
         pulse_increment_tens;
         @(negedge clk);
-        if (o_set_time !== {5'd12, 6'd0, 6'd11, 7'd0}) begin
+        if (o_set_time !== {INIT_HOUR, INIT_MIN, 6'd11, 7'd0}) begin
             $display("FAIL tb_timepiece: sec tens increment mismatch");
             $fatal;
         end
 
+        i_set_index = UNIT_MSEC;
         pulse_shift;  // SEC -> MSEC
+        @(negedge clk);  // datapath 단독 tb에서는 i_set_index를 직접 바꿔준 뒤 1클럭 동기화 기다림
         pulse_decrement;
         @(negedge clk);
-        if (o_set_time !== {5'd12, 6'd0, 6'd11, 7'd99}) begin
+        if (o_set_time !== {INIT_HOUR, INIT_MIN, 6'd11, 7'd99}) begin
             $display("FAIL tb_timepiece: msec decrement wrap mismatch");
             $fatal;
         end
 
         // 8) set_mode를 다시 내리면 편집값이 live time으로 1번 반영되어야 함
         i_set_mode = 1'b0;
-        expect_time(5'd12, 6'd0, 6'd11, 7'd99);
+        expect_time(INIT_HOUR, INIT_MIN, 6'd11, 7'd99);
 
         // 9) 반영 이후에는 기본 카운트가 다시 진행되어야 함
         wait_msec_steps(5);
-        expect_time(5'd12, 6'd0, 6'd12, 7'd5);
+        expect_time(INIT_HOUR, INIT_MIN, 6'd12, 7'd4);
 
         // 10) 출력 버스 묶임도 현재 시간과 동일해야 함
         @(negedge clk);

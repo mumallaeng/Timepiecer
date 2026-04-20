@@ -2,6 +2,11 @@
 
 module tb_timerpiece ();
 
+    localparam UNIT_HOUR = 2'd0;
+    localparam UNIT_SEC  = 2'd2;
+    localparam INIT_HOUR = 5'd13;
+    localparam INIT_MIN  = 6'd59;
+
     // top 입력 자극용 신호
     reg clk;
     reg rst;
@@ -168,8 +173,8 @@ module tb_timerpiece ();
         wait_cycles(5);
         rst = 1'b0;
 
-        // 1) reset 직후 기본 화면은 Timepiece, HH:MM, 24시간제 기준 12:00이어야 함
-        expect_display(5'd12, 6'd0, 6'd0, 7'd0);
+        // 1) reset 직후 기본 화면은 Timepiece, HH:MM, 24시간제 기준 13:59이어야 함
+        expect_display(INIT_HOUR, INIT_MIN, 6'd0, 7'd0);
         if (led !== 2'b00) begin
             $display("FAIL tb_timerpiece: LED reset state mismatch");
             $fatal;
@@ -190,55 +195,62 @@ module tb_timerpiece ();
             $display("FAIL tb_timerpiece: timepiece display mode did not toggle");
             $fatal;
         end
-        press_btnR_short;
-        @(negedge clk);
-        if (UUT.w_display_mode !== 1'b1) begin
-            $display("FAIL tb_timerpiece: timepiece display mode restore mismatch");
-            $fatal;
-        end
-
-        // 4) btnR hold로 set 모드에 진입하고, set 중에도 btnR short로 display mode 토글 가능해야 함
+        // 4) SS:MS 상태에서 btnR hold로 set 모드에 진입하면 sec부터 편집해야 함
         press_btnR_hold;
         if (!UUT.w_timepiece_set_mode) begin
             $display("FAIL tb_timerpiece: failed to enter timepiece set mode");
             $fatal;
         end
-
-        press_btnR_short;
-        @(negedge clk);
-        if (UUT.w_display_mode !== 1'b0 || UUT.w_fnd_display_mode !== 1'b0) begin
-            $display("FAIL tb_timerpiece: set-mode display mode toggle mismatch");
+        if (UUT.w_timepiece_set_index !== UNIT_SEC) begin
+            $display("FAIL tb_timerpiece: ss:ms set entry index mismatch");
             $fatal;
         end
+
+        // 5) ss:ms set 모드에서 btnU short는 sec를 편집해야 함
+        press_btnU_short;  // sec +1
+        if (UUT.w_timepiece_set_time[12:7] !== 6'd1) begin
+            $display("FAIL tb_timerpiece: sec edit mismatch in ss:ms set mode");
+            $fatal;
+        end
+
+        // 6) set 중에도 btnR short로 hh:mm으로 전환 가능해야 하고, set 모드는 유지되어야 함
         press_btnR_short;
         @(negedge clk);
+        if (!UUT.w_timepiece_set_mode) begin
+            $display("FAIL tb_timerpiece: set mode was lost after display toggle");
+            $fatal;
+        end
         if (UUT.w_display_mode !== 1'b1 || UUT.w_fnd_display_mode !== 1'b1) begin
             $display("FAIL tb_timerpiece: set-mode display mode restore mismatch");
             $fatal;
         end
+        if (UUT.w_timepiece_set_index !== UNIT_HOUR) begin
+            $display("FAIL tb_timerpiece: set index remap mismatch after display toggle");
+            $fatal;
+        end
 
-        // 5) set 상태에서 btnU short로 hour를 13까지 편집
-        press_btnU_short;  // 12 -> 13 hour
+        // 7) hh:mm set 상태에서 btnU short로 hour를 14까지 편집
+        press_btnU_short;  // 13 -> 14 hour
 
-        if (UUT.w_timepiece_set_time[23:19] !== 5'd13) begin
+        if (UUT.w_timepiece_set_time[23:19] !== 5'd14) begin
             $display("FAIL tb_timerpiece: set hour edit mismatch");
             $fatal;
         end
 
-        // 6) 12시간제를 켜면 편집 버스와 display hour가 즉시 1로 보여야 함
+        // 8) 12시간제를 켜면 편집 버스와 display hour가 즉시 2로 보여야 함
         sw15 = 1'b1;
         @(negedge clk);
-        if (UUT.w_timepiece_set_time[23:19] !== 5'd1) begin
+        if (UUT.w_timepiece_set_time[23:19] !== 5'd2) begin
             $display("FAIL tb_timerpiece: 12-hour set display mismatch");
             $fatal;
         end
-        expect_display(5'd1, UUT.w_timepiece_set_time[18:13], UUT.w_timepiece_set_time[12:7], UUT.w_timepiece_set_time[6:0]);
+        expect_display(5'd2, UUT.w_timepiece_set_time[18:13], UUT.w_timepiece_set_time[12:7], UUT.w_timepiece_set_time[6:0]);
         if (led[1] !== 1'b1) begin
             $display("FAIL tb_timerpiece: 12-hour LED mismatch");
             $fatal;
         end
 
-        // 7) btnR hold로 set 종료하면 편집값이 live time에 1회 반영되어야 함
+        // 9) btnR hold로 set 종료하면 편집값이 live time에 1회 반영되어야 함
         press_btnR_hold;
         if (UUT.w_timepiece_set_mode) begin
             $display("FAIL tb_timerpiece: failed to leave timepiece set mode");
@@ -246,13 +258,17 @@ module tb_timerpiece ();
         end
 
         @(negedge clk);
-        if (UUT.w_timepiece_hour !== 5'd13) begin
+        if (UUT.w_timepiece_hour !== 5'd14) begin
             $display("FAIL tb_timerpiece: live hour was not updated after set exit");
             $fatal;
         end
-        expect_display(5'd1, UUT.w_timepiece_set_time[18:13], UUT.w_timepiece_set_time[12:7], UUT.w_timepiece_set_time[6:0]);
+        if (UUT.w_timepiece_sec !== 6'd1) begin
+            $display("FAIL tb_timerpiece: live sec was not updated after set exit");
+            $fatal;
+        end
+        expect_display(5'd2, UUT.w_timepiece_set_time[18:13], UUT.w_timepiece_set_time[12:7], UUT.w_timepiece_set_time[6:0]);
 
-        // 8) Timer 모드로 전환하면 display가 timer 값을 따라가야 함
+        // 10) Timer 모드로 전환하면 display가 timer 값을 따라가야 함
         sw0 = 1'b1;
         @(negedge clk);
         if (led[0] !== 1'b1) begin

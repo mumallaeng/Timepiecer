@@ -29,7 +29,11 @@ module fnd_controller #(
     wire [3:0] w_hour_digit_1, w_hour_digit_10;
     wire [ 2:0] w_digit_sel;
     wire        w_1khz;
-    wire        half_sec_sig;
+    localparam integer BLINK_HALF_PERIOD = (MAIN_CLK_100MHZ / 2 <= 1) ? 1 : (MAIN_CLK_100MHZ / 2);
+    localparam integer BLINK_COUNTER_WIDTH = (BLINK_HALF_PERIOD <= 1) ? 1 : $clog2(BLINK_HALF_PERIOD);
+
+    reg [BLINK_COUNTER_WIDTH-1:0] blink_counter_reg;
+    reg                           half_sec_sig;
     wire [3:0]  w_msec_digit_1_disp, w_msec_digit_10_disp;
     wire [3:0]  w_sec_digit_1_disp, w_sec_digit_10_disp;
     wire [3:0]  w_min_digit_1_disp, w_min_digit_10_disp;
@@ -51,6 +55,17 @@ module fnd_controller #(
     assign w_hour_digit_1_disp  = blink_hour ? 4'hf : w_hour_digit_1;
     assign w_hour_digit_10_disp = blink_hour ? 4'hf : w_hour_digit_10;
 
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin  // reset이면 blink 위상 초기화
+            blink_counter_reg <= {BLINK_COUNTER_WIDTH{1'b0}};
+            half_sec_sig      <= 1'b0;
+        end else if (blink_counter_reg == BLINK_HALF_PERIOD - 1) begin
+            blink_counter_reg <= {BLINK_COUNTER_WIDTH{1'b0}};
+            half_sec_sig      <= ~half_sec_sig;  // 0.5초마다 blink 위상 토글
+        end else begin
+            blink_counter_reg <= blink_counter_reg + 1'b1;
+        end
+    end
 
     always @(*) begin
         // 기본적으로 현재 표시 모드의 ':'를 항상 켜 둠
@@ -172,11 +187,6 @@ module fnd_controller #(
     decoder_2x4 U_DECODER_2x4 (
         .decoder_in(w_digit_sel[1:0]),
         .fnd_com(fnd_com)
-    );
-
-    comparator U_COMPARATOR (
-        .msec(msec),
-        .half_sec_sig(half_sec_sig)
     );
 
 endmodule

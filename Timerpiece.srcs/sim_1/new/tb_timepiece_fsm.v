@@ -4,6 +4,7 @@ module tb_timepiece_fsm ();
 
     reg clk;
     reg rst;
+    reg i_display_mode;
     reg i_btnL;
     reg i_btnU;
     reg i_btnD;
@@ -28,6 +29,7 @@ module tb_timepiece_fsm ();
     timepiece_fsm U0 (
         .clk(clk),
         .rst(rst),
+        .i_display_mode(i_display_mode),
         .i_btnL(i_btnL),
         .i_btnU(i_btnU),
         .i_btnD(i_btnD),
@@ -119,6 +121,7 @@ module tb_timepiece_fsm ();
         // 초기값: reset asserted, 모든 버튼 입력 0
         clk = 1'b0;
         rst = 1'b1;
+        i_display_mode = 1'b1;
         i_btnL = 1'b0;
         i_btnU = 1'b0;
         i_btnD = 1'b0;
@@ -133,7 +136,7 @@ module tb_timepiece_fsm ();
         // 1) reset 직후에는 VIEW 상태여야 함
         expect_outputs(1'b0, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 
-        // 2) BtnR hold로 SET 상태 진입 확인
+        // 2) HH:MM 표시 상태에서 BtnR hold로 SET 상태 진입 시 hour부터 편집해야 함
         pulse_btnR_hold;
         expect_outputs(1'b1, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 
@@ -166,11 +169,29 @@ module tb_timepiece_fsm ();
         pulse_btnR_hold;
         expect_outputs(1'b0, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
 
-        // 9) sw0가 1이면 강제로 VIEW 유지
+        // 9) SS:MS 표시 상태에서 SET 진입 시 sec부터 편집해야 함
+        i_display_mode = 1'b0;
+        @(negedge clk);
         pulse_btnR_hold;
+        expect_outputs(1'b1, UNIT_SEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+
+        // 10) set 중 display mode가 HH:MM으로 바뀌면 set 모드는 유지되고 sec -> hour로 remap되어야 함
+        i_display_mode = 1'b1;
+        @(posedge clk);
         expect_outputs(1'b1, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+
+        // 11) 다시 SS:MS로 바꾸면 hour -> sec로 remap되어야 함
+        i_display_mode = 1'b0;
+        @(posedge clk);
+        expect_outputs(1'b1, UNIT_SEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+
+        // 12) sw0가 1이면 강제로 VIEW 유지
+        pulse_btnR_hold;
+        expect_outputs(1'b0, UNIT_SEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        pulse_btnR_hold;
+        expect_outputs(1'b1, UNIT_SEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
         i_sw0 = 1'b1;
-        expect_outputs(1'b0, UNIT_HOUR, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
+        expect_outputs(1'b0, UNIT_SEC, 1'b0, 1'b0, 1'b0, 1'b0, 1'b0);
         i_sw0 = 1'b0;
 
         $display("PASS tb_timepiece_fsm");

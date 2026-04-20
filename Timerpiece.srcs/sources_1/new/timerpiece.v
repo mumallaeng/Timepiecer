@@ -106,6 +106,7 @@ module timerpiece #(
     common_control U_COMMON_CONTROL (
         .clk(clk),
         .rst(rst),
+        .i_sw0(w_sw0),
         .i_btnR(w_btnR),
         .o_display_mode(w_display_mode)
     );
@@ -137,6 +138,7 @@ module timerpiece #(
     timepiece_fsm U_TIMEPIECE_FSM (
         .clk(clk),
         .rst(rst),
+        .i_display_mode(w_display_mode),
         .i_btnL(w_btnL),
         .i_btnU(w_btnU),
         .i_btnD(w_btnD),
