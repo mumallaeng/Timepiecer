@@ -45,7 +45,7 @@ module tb_debouncer ();
         #10;
 
         i_btn = 1;
-        #(5 * 100000000);
+        #(5 * 1000);
 
         i_btn = 0;
 
