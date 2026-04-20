@@ -68,7 +68,7 @@ module tb_timepiecer ();
         integer idx;
     begin
         for (idx = 0; idx < steps; idx = idx + 1) begin
-            @(posedge UUT.U_TIMEPIECE_DATAPATH.w_tick_100hz);
+            @(posedge UUT.U_TIMEPIECE.U_TIMEPIECE_DATAPATH.w_tick_100hz);
         end
         @(negedge clk);
     end
@@ -154,11 +154,12 @@ module tb_timepiecer ();
         input [6:0] exp_msec;
     begin
         @(negedge clk);
-        if ({UUT.w_display_hour, UUT.w_display_min, UUT.w_display_sec, UUT.w_display_msec}
+        if ({UUT.U_DISPLAY.w_display_hour, UUT.U_DISPLAY.w_display_min, UUT.U_DISPLAY.w_display_sec, UUT.U_DISPLAY.w_display_msec}
             !== {exp_hour, exp_min, exp_sec, exp_msec}) begin
             $display("FAIL tb_timepiecer: display expected %0d:%0d:%0d:%0d, got %0d:%0d:%0d:%0d",
                      exp_hour, exp_min, exp_sec, exp_msec,
-                     UUT.w_display_hour, UUT.w_display_min, UUT.w_display_sec, UUT.w_display_msec);
+                     UUT.U_DISPLAY.w_display_hour, UUT.U_DISPLAY.w_display_min,
+                     UUT.U_DISPLAY.w_display_sec, UUT.U_DISPLAY.w_display_msec);
             $fatal;
         end
     end
@@ -207,7 +208,10 @@ module tb_timepiecer ();
 
         // 2) Timepiece는 기본적으로 계속 흐르며 display가 이를 따라가야 함
         wait_timepiece_ticks(15);
-        expect_display(UUT.w_timepiece_hour, UUT.w_timepiece_min, UUT.w_timepiece_sec, UUT.w_timepiece_msec);
+        expect_display(UUT.U_TIMEPIECE.U_TIMEPIECE_DATAPATH.hour,
+                       UUT.U_TIMEPIECE.U_TIMEPIECE_DATAPATH.min,
+                       UUT.U_TIMEPIECE.U_TIMEPIECE_DATAPATH.sec,
+                       UUT.U_TIMEPIECE.U_TIMEPIECE_DATAPATH.msec);
 
         // 3) Timepiece에서도 set 모드가 아닐 때는 btnR short로 display mode를 토글할 수 있어야 함
         if (UUT.w_display_mode !== 1'b1) begin
@@ -247,7 +251,7 @@ module tb_timepiecer ();
             $display("FAIL tb_timepiecer: set mode was lost after display toggle");
             $fatal;
         end
-        if (UUT.w_display_mode !== 1'b1 || UUT.w_fnd_display_mode !== 1'b1) begin
+        if (UUT.w_display_mode !== 1'b1) begin
             $display("FAIL tb_timepiecer: set-mode display mode restore mismatch");
             $fatal;
         end
@@ -290,19 +294,23 @@ module tb_timepiecer ();
         end
 
         @(negedge clk);
-        if (UUT.w_timepiece_hour !== UUT.U_TIMEPIECE_DATAPATH.w_set_time_load[23:19]) begin
+        if (UUT.U_TIMEPIECE.U_TIMEPIECE_DATAPATH.hour
+            !== UUT.U_TIMEPIECE.U_TIMEPIECE_DATAPATH.w_set_time_load[23:19]) begin
             $display("FAIL tb_timepiecer: live hour was not updated after set exit");
             $fatal;
         end
-        if (UUT.w_timepiece_min !== UUT.U_TIMEPIECE_DATAPATH.w_set_time_load[18:13]) begin
+        if (UUT.U_TIMEPIECE.U_TIMEPIECE_DATAPATH.min
+            !== UUT.U_TIMEPIECE.U_TIMEPIECE_DATAPATH.w_set_time_load[18:13]) begin
             $display("FAIL tb_timepiecer: live min was not updated after set exit");
             $fatal;
         end
-        if (UUT.w_timepiece_sec !== UUT.U_TIMEPIECE_DATAPATH.w_set_time_load[12:7]) begin
+        if (UUT.U_TIMEPIECE.U_TIMEPIECE_DATAPATH.sec
+            !== UUT.U_TIMEPIECE.U_TIMEPIECE_DATAPATH.w_set_time_load[12:7]) begin
             $display("FAIL tb_timepiecer: live sec was not updated after set exit");
             $fatal;
         end
-        if (UUT.w_timepiece_msec !== UUT.U_TIMEPIECE_DATAPATH.w_set_time_load[6:0]) begin
+        if (UUT.U_TIMEPIECE.U_TIMEPIECE_DATAPATH.msec
+            !== UUT.U_TIMEPIECE.U_TIMEPIECE_DATAPATH.w_set_time_load[6:0]) begin
             $display("FAIL tb_timepiecer: live msec was not updated after set exit");
             $fatal;
         end

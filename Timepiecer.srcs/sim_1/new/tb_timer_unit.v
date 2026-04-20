@@ -7,33 +7,47 @@ module tb_timer_unit ();
     reg i_btnD;
     reg i_btnL;
     reg i_btnU;
+    reg btnR;
     reg i_sw0;
+    reg sw15;
     wire [6:0] msec;
     wire [5:0] sec;
     wire [5:0] min;
     wire [4:0] hour;
 
-    wire w_btnD, w_btnL, w_btnU, w_sw0;
+    wire w_btnD, w_btnL, w_btnU, w_btnR, w_sw0, w_sw15;
+    wire w_btnU_hold, w_btnD_hold, w_btnL_hold, w_btnR_hold;
 
     parameter PUSH = 100_000;
     parameter DELAY = 1_000_000_00;
     parameter WAIT = 1_000_00;
 
     input_conditioning #(
-        .CLK_FREQ_HZ(100_000_000),  // 100MHz
+        .CLK_FREQ_HZ(100_000_000),
         .BD_HZ(100_000),
-        .HOLD_TIME(100_000)  // 1.5초
+        .HOLD_TIME_BTN_R(100_000),
+        .HOLD_TIME_BTN_UD(100_000),
+        .HOLD_TIME_BTN_L(100_000),
+        .REPEAT_TIME_BTN_UD(20_000)
     ) U_INPUT_CON (
         .clk(clk),
         .rst(rst),
         .btnU(i_btnU),
         .btnD(i_btnD),
         .btnL(i_btnL),
+        .btnR(btnR),
         .sw0(i_sw0),
+        .sw15(sw15),
         .o_btnU(w_btnU),
         .o_btnD(w_btnD),
         .o_btnL(w_btnL),
-        .o_sw0(w_sw0)
+        .o_btnR(w_btnR),
+        .o_btnU_hold(w_btnU_hold),
+        .o_btnD_hold(w_btnD_hold),
+        .o_btnL_hold(w_btnL_hold),
+        .o_btnR_hold(w_btnR_hold),
+        .o_sw0(w_sw0),
+        .o_sw15(w_sw15)
     );
 
     timer_unit #(
@@ -68,7 +82,9 @@ module tb_timer_unit ();
         i_btnU = 0;
         i_btnD = 0;
         i_btnL = 0;
+        btnR = 0;
         i_sw0 = 0;
+        sw15 = 0;
         repeat (3) @(negedge clk);
         rst = 0;
         i_sw0 = 1;

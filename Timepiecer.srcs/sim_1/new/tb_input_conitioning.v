@@ -22,9 +22,12 @@ module tb_input_conitioning ();
     wire o_sw15;
 
     input_conditioning #(
-        .CLK_FREQ_HZ(100_000_000),  // 100MHz
-        .BD_HZ      (100_000),      // 100k
-        .HOLD_TIME  (100_000)       //00)   // 1.5초
+        .CLK_FREQ_HZ(100_000_000),
+        .BD_HZ(100_000),
+        .HOLD_TIME_BTN_R(150_000),
+        .HOLD_TIME_BTN_UD(100_000),
+        .HOLD_TIME_BTN_L(100_000),
+        .REPEAT_TIME_BTN_UD(20_000)
     ) U0 (
         .clk(clk),
         .rst(rst),

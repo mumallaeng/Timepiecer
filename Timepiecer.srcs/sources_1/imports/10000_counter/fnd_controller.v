@@ -266,32 +266,6 @@ module digit_splitter #(
 
 endmodule
 
-module mux_4x1 (
-    input [3:0] in0,  // digit 1
-    input [3:0] in1,  // digit 10
-    input [3:0] in2,  // digit 100
-    input [3:0] in3,  // digit 1000
-    input [1:0] sel,  // to select input
-    output [3:0] out_mux
-);
-    reg [3:0] out_reg;
-    assign out_mux = out_reg;
-
-    // mux, (*) all input : sensitivity list
-    always @(*  /*in0, in1, in2, in3, sel*/) begin
-        case (sel)
-            2'b00:   out_reg = in0;
-            2'b01:   out_reg = in1;
-            2'b10:   out_reg = in2;
-            2'b11:   out_reg = in3;
-            default: out_reg = 4'b0000;
-        endcase
-    end
-
-endmodule
-
-
-
 module mux_8x1 (
     input [3:0] in0,  // digit 1
     input [3:0] in1,  // digit 10
@@ -308,7 +282,8 @@ module mux_8x1 (
     assign out_mux = out_reg;
 
     // mux, (*) all input : sensitivity list
-    always @(*  /*in0, in1, in2, in3, sel*/) begin
+    // (in0, in1, in2, in3, in4, in5, in6, in7, sel)
+    always @(*) begin
         case (sel)
             3'b000:  out_reg = in0;
             3'b001:  out_reg = in1;
