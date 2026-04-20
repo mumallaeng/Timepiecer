@@ -25,7 +25,11 @@ module tb_debouncer ();
     reg clk, rst, i_btn;
     wire o_btn, o_btn_hold;
 
-    debouncer U0 (
+    debouncer #(
+        .CLK_FREQ_HZ(100_000_000),  // 100MHz
+        .BD_HZ      (100_000),      // 100k
+        .HOLD_TIME  (100_000)       //00)   // 1.5초
+    ) U0 (
         .clk(clk),
         .rst(rst),
         .i_btn(i_btn),
