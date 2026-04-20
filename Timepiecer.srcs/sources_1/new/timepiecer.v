@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-module timerpiece #(
+module timepiecer #(
     parameter CLK_FREQ_HZ      = 100_000_000,
     parameter BD_HZ            = 100_000,
     parameter HOLD_TIME_BTN_R  = 200_000_000,

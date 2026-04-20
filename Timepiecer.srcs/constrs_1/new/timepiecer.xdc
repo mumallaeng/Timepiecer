@@ -1,4 +1,4 @@
-## Basys3 constraints for timerpiece
+## Basys3 constraints for timepiecer
 
 ## Clock
 set_property -dict { PACKAGE_PIN W5 IOSTANDARD LVCMOS33 } [get_ports clk]

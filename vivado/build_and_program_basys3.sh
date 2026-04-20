@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# Timerpiece full build helper for macOS host.
+# Timepiecer full build helper for macOS host.
 # - Host: macOS with zsh + openFPGALoader
 # - Build: Vivado 2020.2 inside Docker container
 # - Flow: full resynthesis -> implementation -> bitstream -> optional program
@@ -12,8 +12,8 @@ project_root=$(cd "$script_dir/.." && pwd)
 
 container_name="${VIVADO_CONTAINER_NAME:-vivado_container}"
 vivado_version="${VIVADO_VERSION:-2020.2}"
-container_project_root="${TIMERPIECE_CONTAINER_ROOT:-/home/user/git/TimerPiece-main}"
-top_name="${TOP_NAME:-timerpiece}"
+container_project_root="${TIMEPIECER_CONTAINER_ROOT:-/home/user/git/Timepiecer-main}"
+top_name="${TOP_NAME:-timepiecer}"
 board_name="${OPENFPGA_BOARD:-basys3}"
 build_only=0
 flash_mode=0
@@ -38,13 +38,13 @@ do
     esac
 done
 
-host_synth_dcp="$project_root/Timerpiece.runs/synth_1/${top_name}.dcp"
-host_bit="$project_root/Timerpiece.runs/impl_1/${top_name}_nonproject.bit"
-container_synth_dcp="$container_project_root/Timerpiece.runs/synth_1/${top_name}.dcp"
-container_bit="$container_project_root/Timerpiece.runs/impl_1/${top_name}_nonproject.bit"
-container_timing_rpt="$container_project_root/Timerpiece.runs/impl_1/${top_name}_timing_summary_nonproject.rpt"
-container_util_rpt="$container_project_root/Timerpiece.runs/impl_1/${top_name}_utilization_nonproject.rpt"
-container_routed_dcp="$container_project_root/Timerpiece.runs/impl_1/${top_name}_routed_nonproject.dcp"
+host_synth_dcp="$project_root/Timepiecer.runs/synth_1/${top_name}.dcp"
+host_bit="$project_root/Timepiecer.runs/impl_1/${top_name}_nonproject.bit"
+container_synth_dcp="$container_project_root/Timepiecer.runs/synth_1/${top_name}.dcp"
+container_bit="$container_project_root/Timepiecer.runs/impl_1/${top_name}_nonproject.bit"
+container_timing_rpt="$container_project_root/Timepiecer.runs/impl_1/${top_name}_timing_summary_nonproject.rpt"
+container_util_rpt="$container_project_root/Timepiecer.runs/impl_1/${top_name}_utilization_nonproject.rpt"
+container_routed_dcp="$container_project_root/Timepiecer.runs/impl_1/${top_name}_routed_nonproject.dcp"
 
 if ! docker ps --format '{{.Names}}' | grep -Fxq "$container_name"
 then
@@ -67,21 +67,21 @@ create_project -in_memory -part xc7a35tcpg236-1
 file mkdir [file dirname $container_synth_dcp]
 file mkdir [file dirname $container_bit]
 
-read_verilog $container_project_root/Timerpiece.srcs/sources_1/new/common_control.v
-read_verilog $container_project_root/Timerpiece.srcs/sources_1/new/debouncer.v
-read_verilog $container_project_root/Timerpiece.srcs/sources_1/new/display_select.v
-read_verilog $container_project_root/Timerpiece.srcs/sources_1/imports/10000_counter/fnd_controller.v
-read_verilog $container_project_root/Timerpiece.srcs/sources_1/new/input_conditioning.v
-read_verilog $container_project_root/Timerpiece.srcs/sources_1/new/time_set_module.v
-read_verilog $container_project_root/Timerpiece.srcs/sources_1/new/timepiece_datapath.v
-read_verilog $container_project_root/Timerpiece.srcs/sources_1/new/timepiece_fsm.v
-read_verilog $container_project_root/Timerpiece.srcs/sources_1/new/timer_datapath.v
-read_verilog $container_project_root/Timerpiece.srcs/sources_1/new/timer_fsm.v
-read_verilog $container_project_root/Timerpiece.srcs/sources_1/new/timer_unit.v
-read_verilog $container_project_root/Timerpiece.srcs/sources_1/new/timerpiece.v
+read_verilog $container_project_root/Timepiecer.srcs/sources_1/new/common_control.v
+read_verilog $container_project_root/Timepiecer.srcs/sources_1/new/debouncer.v
+read_verilog $container_project_root/Timepiecer.srcs/sources_1/new/display_select.v
+read_verilog $container_project_root/Timepiecer.srcs/sources_1/imports/10000_counter/fnd_controller.v
+read_verilog $container_project_root/Timepiecer.srcs/sources_1/new/input_conditioning.v
+read_verilog $container_project_root/Timepiecer.srcs/sources_1/new/time_set_module.v
+read_verilog $container_project_root/Timepiecer.srcs/sources_1/new/timepiece_datapath.v
+read_verilog $container_project_root/Timepiecer.srcs/sources_1/new/timepiece_fsm.v
+read_verilog $container_project_root/Timepiecer.srcs/sources_1/new/timer_datapath.v
+read_verilog $container_project_root/Timepiecer.srcs/sources_1/new/timer_fsm.v
+read_verilog $container_project_root/Timepiecer.srcs/sources_1/new/timer_unit.v
+read_verilog $container_project_root/Timepiecer.srcs/sources_1/new/timepiecer.v
 
-read_xdc $container_project_root/Timerpiece.srcs/constrs_1/new/Basys-3-Master.xdc
-read_xdc $container_project_root/Timerpiece.srcs/constrs_1/new/timerpiece.xdc
+read_xdc $container_project_root/Timepiecer.srcs/constrs_1/new/Basys-3-Master.xdc
+read_xdc $container_project_root/Timepiecer.srcs/constrs_1/new/timepiecer.xdc
 
 synth_design -top $top_name -part xc7a35tcpg236-1
 write_checkpoint -force $container_synth_dcp
