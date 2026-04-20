@@ -8,14 +8,16 @@ module tb_time_set ();
     reg [1:0] i_set_index;
     reg i_index_shift;
     reg i_increment;
+    reg i_increment_tens;
     reg i_decrement;
+    reg i_decrement_tens;
     reg [23:0] i_live_time;
     wire [23:0] o_set_time;
 
-    localparam UNIT_MSEC = 2'd0;
-    localparam UNIT_SEC  = 2'd1;
-    localparam UNIT_MIN  = 2'd2;
-    localparam UNIT_HOUR = 2'd3;
+    localparam UNIT_HOUR = 2'd0;
+    localparam UNIT_MIN  = 2'd1;
+    localparam UNIT_SEC  = 2'd2;
+    localparam UNIT_MSEC = 2'd3;
 
     time_set_module U0 (
         .clk(clk),
@@ -24,7 +26,9 @@ module tb_time_set ();
         .i_set_index(i_set_index),
         .i_index_shift(i_index_shift),
         .i_increment(i_increment),
+        .i_increment_tens(i_increment_tens),
         .i_decrement(i_decrement),
+        .i_decrement_tens(i_decrement_tens),
         .i_live_time(i_live_time),
         .o_set_time(o_set_time)
     );
@@ -41,12 +45,30 @@ module tb_time_set ();
     end
     endtask
 
+    // increment_tens를 1클럭 펄스로 넣어 현재 선택 단위를 10 증가
+    task pulse_increment_tens;
+    begin
+        i_increment_tens = 1'b1;
+        @(negedge clk);
+        i_increment_tens = 1'b0;
+    end
+    endtask
+
     // decrement를 1클럭 펄스로 넣어 현재 선택 단위를 1 감소
     task pulse_decrement;
     begin
         i_decrement = 1'b1;
         @(negedge clk);
         i_decrement = 1'b0;
+    end
+    endtask
+
+    // decrement_tens를 1클럭 펄스로 넣어 현재 선택 단위를 10 감소
+    task pulse_decrement_tens;
+    begin
+        i_decrement_tens = 1'b1;
+        @(negedge clk);
+        i_decrement_tens = 1'b0;
     end
     endtask
 
@@ -84,7 +106,9 @@ module tb_time_set ();
         i_set_index = UNIT_MSEC;
         i_index_shift = 1'b0;
         i_increment = 1'b0;
+        i_increment_tens = 1'b0;
         i_decrement = 1'b0;
+        i_decrement_tens = 1'b0;
         i_live_time = 24'd0;
 
         // reset 해제 후부터 본격 테스트 시작
@@ -114,12 +138,28 @@ module tb_time_set ();
         pulse_decrement;
         expect_set_time(5'd10, 6'd22, 6'd44, 7'd77);
 
-        // 5) shift 후에는 편집 단위가 SEC -> MIN으로 넘어가야 함.
-        pulse_shift;
-        pulse_increment;
+        // 5) SEC 선택 상태에서 +10 / -10도 sec에만 반영되는지 확인함.
+        pulse_increment_tens;
+        expect_set_time(5'd10, 6'd22, 6'd54, 7'd77);
+
+        pulse_decrement_tens;
+        expect_set_time(5'd10, 6'd22, 6'd44, 7'd77);
+
+        // 6) shift 후에는 편집 단위가 SEC -> MSEC으로 넘어가야 하므로
+        //    hour -> min -> sec -> msec 순서를 맞추기 위해 hour부터 다시 진입함.
+        i_set_mode = 1'b0;
+        i_live_time = {5'd10, 6'd22, 6'd44, 7'd77};
+        expect_set_time(5'd10, 6'd22, 6'd44, 7'd77);
+
+        i_set_index = UNIT_HOUR;
+        i_set_mode = 1'b1;
+        expect_set_time(5'd10, 6'd22, 6'd44, 7'd77);
+
+        pulse_shift;  // HOUR -> MIN
+        pulse_increment;  // MIN +1
         expect_set_time(5'd10, 6'd23, 6'd44, 7'd77);
 
-        // 6) MIN 단위에서 59 -> 0, 0 -> 59 wrap 동작 확인함.
+        // 7) MIN 단위에서 59 -> 0, 0 -> 59 wrap 동작 확인함.
         i_set_mode = 1'b0;
         i_live_time = {5'd10, 6'd59, 6'd44, 7'd77};
         expect_set_time(5'd10, 6'd59, 6'd44, 7'd77);
@@ -134,7 +174,7 @@ module tb_time_set ();
         pulse_decrement;
         expect_set_time(5'd10, 6'd59, 6'd44, 7'd77);
 
-        // 7) HOUR 단위에서 23 -> 0, 0 -> 23 wrap 동작 확인함.
+        // 8) HOUR 단위에서 23 -> 0, 0 -> 23 wrap 동작 확인함.
         i_set_mode = 1'b0;
         i_live_time = {5'd23, 6'd10, 6'd20, 7'd30};
         expect_set_time(5'd23, 6'd10, 6'd20, 7'd30);
@@ -149,7 +189,7 @@ module tb_time_set ();
         pulse_decrement;
         expect_set_time(5'd23, 6'd10, 6'd20, 7'd30);
 
-        // 8) MSEC 단위에서 99 -> 0, 0 -> 99 wrap 동작 확인함.
+        // 9) MSEC 단위에서 99 -> 0, 0 -> 99 wrap 동작 확인함.
         i_set_mode = 1'b0;
         i_live_time = {5'd1, 6'd2, 6'd3, 7'd99};
         expect_set_time(5'd1, 6'd2, 6'd3, 7'd99);
@@ -163,6 +203,27 @@ module tb_time_set ();
 
         pulse_decrement;
         expect_set_time(5'd1, 6'd2, 6'd3, 7'd99);
+
+        // 10) hour와 msec의 tens 편집도 wrap 포함해 동작하는지 확인함.
+        i_set_mode = 1'b0;
+        i_live_time = {5'd18, 6'd2, 6'd3, 7'd95};
+        expect_set_time(5'd18, 6'd2, 6'd3, 7'd95);
+
+        i_set_index = UNIT_HOUR;
+        i_set_mode = 1'b1;
+        expect_set_time(5'd18, 6'd2, 6'd3, 7'd95);
+
+        pulse_increment_tens;
+        expect_set_time(5'd4, 6'd2, 6'd3, 7'd95);
+
+        pulse_shift;
+        pulse_shift;
+        pulse_shift;  // HOUR -> MIN -> SEC -> MSEC
+        pulse_increment_tens;
+        expect_set_time(5'd4, 6'd2, 6'd3, 7'd5);
+
+        pulse_decrement_tens;
+        expect_set_time(5'd4, 6'd2, 6'd3, 7'd95);
 
         // 모든 케이스를 통과하면 PASS 출력 후 종료
         $display("PASS tb_time_set");

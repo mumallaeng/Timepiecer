@@ -16,7 +16,9 @@ module timepiece_datapath #(
     input [1:0] i_set_index,
     input i_index_shift,
     input i_increment,
+    input i_increment_tens,
     input i_decrement,
+    input i_decrement_tens,
     input [1:0] i_time_24,
     output [23:0] o_set_time,
     output [23:0] o_timepiece_vault,
@@ -42,7 +44,11 @@ module timepiece_datapath #(
     wire w_sec_tick;
     wire w_min_tick;
     wire w_hour_tick;
+    wire w_apply_set_time;
     wire [23:0] w_live_time;
+    wire [23:0] w_set_time;
+
+    reg set_mode_d_reg;
 
     assign o_sec_tick  = w_sec_tick;
     assign o_min_tick  = w_min_tick;
@@ -53,9 +59,44 @@ module timepiece_datapath #(
     assign w_live_time       = {hour, min, sec, msec};
     assign o_timepiece_vault = w_live_time;
 
-    // time_set_module 붙이기 전 단계에서는 설정 버스를 현재 시간값과 동일하게 둠.
-    // 이후 time_set_module을 연결하면 이 자리에 편집 결과 버스가 들어오게 됨.
-    assign o_set_time = o_timepiece_vault;
+    // 편집 결과 버스는 time_set_module이 따로 생성함.
+    assign o_set_time = w_set_time;
+
+    // set_mode가 1 -> 0으로 떨어지는 순간에만 편집한 시간을 실제 시계값에 반영함.
+    assign w_apply_set_time = set_mode_d_reg & ~i_set_mode;
+
+    always @(posedge clk or posedge rst) begin
+        if (rst) begin  // reset이면 이전 set_mode 상태를 초기화
+            set_mode_d_reg <= 1'b0;
+        end else begin  // 평소에는 현재 set_mode를 저장해 falling edge 검출에 사용
+            set_mode_d_reg <= i_set_mode;
+        end
+    end
+
+    // time_set_module은 실시간 시계값을 기준으로 편집 버스를 만들고
+    // set 모드가 아닐 때는 live time을 그대로 따라가도록 동작함.
+    time_set_module #(
+        .MSEC_WIDTH(MSEC_WIDTH),
+        .SEC_WIDTH(SEC_WIDTH),
+        .MIN_WIDTH(MIN_WIDTH),
+        .HOUR_WIDTH(HOUR_WIDTH),
+        .MSEC_TIMES(MSEC_TIMES),
+        .SEC_TIMES(SEC_TIMES),
+        .MIN_TIMES(MIN_TIMES),
+        .HOUR_TIMES(HOUR_TIMES)
+    ) U_TIME_SET_MODULE (
+        .clk(clk),
+        .rst(rst),
+        .i_set_mode(i_set_mode),
+        .i_set_index(i_set_index),
+        .i_index_shift(i_index_shift),
+        .i_increment(i_increment),
+        .i_increment_tens(i_increment_tens),
+        .i_decrement(i_decrement),
+        .i_decrement_tens(i_decrement_tens),
+        .i_live_time(w_live_time),
+        .o_set_time(w_set_time)
+    );
 
     tick_gen_100hz U_TICK_GEN_100HZ (
         .clk(clk),
@@ -70,8 +111,8 @@ module timepiece_datapath #(
         .clk(clk),
         .rst(rst),
         .i_tick(w_tick_100hz),
-        .i_set_mode(i_set_mode),
-        .i_time(o_set_time[MSEC_MSB:MSEC_LSB]),
+        .i_load(w_apply_set_time),
+        .i_time(w_set_time[MSEC_MSB:MSEC_LSB]),
         .o_time(msec),
         .o_tick(w_sec_tick)
     );
@@ -83,8 +124,8 @@ module timepiece_datapath #(
         .clk(clk),
         .rst(rst),
         .i_tick(w_sec_tick),
-        .i_set_mode(i_set_mode),
-        .i_time(o_set_time[SEC_MSB:SEC_LSB]),
+        .i_load(w_apply_set_time),
+        .i_time(w_set_time[SEC_MSB:SEC_LSB]),
         .o_time(sec),
         .o_tick(w_min_tick)
     );
@@ -96,8 +137,8 @@ module timepiece_datapath #(
         .clk(clk),
         .rst(rst),
         .i_tick(w_min_tick),
-        .i_set_mode(i_set_mode),
-        .i_time(o_set_time[MIN_MSB:MIN_LSB]),
+        .i_load(w_apply_set_time),
+        .i_time(w_set_time[MIN_MSB:MIN_LSB]),
         .o_time(min),
         .o_tick(w_hour_tick)
     );
@@ -109,8 +150,8 @@ module timepiece_datapath #(
         .clk(clk),
         .rst(rst),
         .i_tick(w_hour_tick),
-        .i_set_mode(i_set_mode),
-        .i_time(o_set_time[HOUR_MSB:HOUR_LSB]),
+        .i_load(w_apply_set_time),
+        .i_time(w_set_time[HOUR_MSB:HOUR_LSB]),
         .o_time(hour),
         .o_tick()
     );
@@ -123,7 +164,7 @@ module tick_counter #(
     input clk,
     input rst,
     input i_tick,
-    input i_set_mode,
+    input i_load,
     input [BIT_WIDTH-1:0] i_time,
     output [BIT_WIDTH-1:0] o_time,
     output reg o_tick
@@ -146,9 +187,9 @@ module tick_counter #(
         time_next = time_reg;
         o_tick = 1'b0;
 
-        if (i_set_mode) begin  // set 모드이면 입력된 시간으로 설정
+        if (i_load) begin  // load 펄스가 들어오면 입력된 시간으로 현재 값을 갱신
             time_next = i_time;
-        end else if (i_tick) begin  // set 모드 아닐 때는 시간 카운트
+        end else if (i_tick) begin  // load 펄스가 없을 때는 시간 카운트
             if (time_reg == TIMES - 1) begin  // 최대 시간에 도달하면 시간 초기화하고 tick 발생
                 time_next = 0;
                 o_tick = 1'b1;

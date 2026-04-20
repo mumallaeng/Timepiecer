@@ -16,7 +16,9 @@ module time_set_module #(
     input [1:0] i_set_index,
     input i_index_shift,
     input i_increment,
+    input i_increment_tens,
     input i_decrement,
+    input i_decrement_tens,
     input [23:0] i_live_time,
     output [23:0] o_set_time
 );
@@ -30,15 +32,16 @@ module time_set_module #(
     localparam HOUR_LSB = 19;
     localparam HOUR_MSB = 23;
 
-    localparam UNIT_MSEC = 2'd0;
-    localparam UNIT_SEC  = 2'd1;
-    localparam UNIT_MIN  = 2'd2;
-    localparam UNIT_HOUR = 2'd3;
+    localparam UNIT_HOUR = 2'd0;
+    localparam UNIT_MIN  = 2'd1;
+    localparam UNIT_SEC  = 2'd2;
+    localparam UNIT_MSEC = 2'd3;
 
     localparam [MSEC_WIDTH-1:0] MSEC_MAX = MSEC_TIMES - 1;
     localparam [SEC_WIDTH-1:0]  SEC_MAX  = SEC_TIMES  - 1;
     localparam [MIN_WIDTH-1:0]  MIN_MAX  = MIN_TIMES  - 1;
     localparam [HOUR_WIDTH-1:0] HOUR_MAX = HOUR_TIMES - 1;
+    localparam integer TENS_STEP = 10;
 
     reg [1:0] set_index_reg;
     reg [1:0] set_index_next;
@@ -59,6 +62,106 @@ module time_set_module #(
     wire [MIN_WIDTH-1:0] live_min;
     wire [HOUR_WIDTH-1:0] live_hour;
 
+    function [1:0] next_unit;
+        input [1:0] current_unit;
+    begin
+        case (current_unit)
+            UNIT_HOUR: next_unit = UNIT_MIN;
+            UNIT_MIN:  next_unit = UNIT_SEC;
+            UNIT_SEC:  next_unit = UNIT_MSEC;
+            default:   next_unit = UNIT_HOUR;
+        endcase
+    end
+    endfunction
+
+    function [MSEC_WIDTH-1:0] wrap_add_msec;
+        input [MSEC_WIDTH-1:0] value;
+        input integer step;
+        integer sum;
+    begin
+        sum = value + step;
+        if (sum >= MSEC_TIMES) wrap_add_msec = sum - MSEC_TIMES;
+        else wrap_add_msec = sum[MSEC_WIDTH-1:0];
+    end
+    endfunction
+
+    function [SEC_WIDTH-1:0] wrap_add_sec;
+        input [SEC_WIDTH-1:0] value;
+        input integer step;
+        integer sum;
+    begin
+        sum = value + step;
+        if (sum >= SEC_TIMES) wrap_add_sec = sum - SEC_TIMES;
+        else wrap_add_sec = sum[SEC_WIDTH-1:0];
+    end
+    endfunction
+
+    function [MIN_WIDTH-1:0] wrap_add_min;
+        input [MIN_WIDTH-1:0] value;
+        input integer step;
+        integer sum;
+    begin
+        sum = value + step;
+        if (sum >= MIN_TIMES) wrap_add_min = sum - MIN_TIMES;
+        else wrap_add_min = sum[MIN_WIDTH-1:0];
+    end
+    endfunction
+
+    function [HOUR_WIDTH-1:0] wrap_add_hour;
+        input [HOUR_WIDTH-1:0] value;
+        input integer step;
+        integer sum;
+    begin
+        sum = value + step;
+        if (sum >= HOUR_TIMES) wrap_add_hour = sum - HOUR_TIMES;
+        else wrap_add_hour = sum[HOUR_WIDTH-1:0];
+    end
+    endfunction
+
+    function [MSEC_WIDTH-1:0] wrap_sub_msec;
+        input [MSEC_WIDTH-1:0] value;
+        input integer step;
+        integer diff;
+    begin
+        diff = value - step;
+        if (diff < 0) wrap_sub_msec = diff + MSEC_TIMES;
+        else wrap_sub_msec = diff[MSEC_WIDTH-1:0];
+    end
+    endfunction
+
+    function [SEC_WIDTH-1:0] wrap_sub_sec;
+        input [SEC_WIDTH-1:0] value;
+        input integer step;
+        integer diff;
+    begin
+        diff = value - step;
+        if (diff < 0) wrap_sub_sec = diff + SEC_TIMES;
+        else wrap_sub_sec = diff[SEC_WIDTH-1:0];
+    end
+    endfunction
+
+    function [MIN_WIDTH-1:0] wrap_sub_min;
+        input [MIN_WIDTH-1:0] value;
+        input integer step;
+        integer diff;
+    begin
+        diff = value - step;
+        if (diff < 0) wrap_sub_min = diff + MIN_TIMES;
+        else wrap_sub_min = diff[MIN_WIDTH-1:0];
+    end
+    endfunction
+
+    function [HOUR_WIDTH-1:0] wrap_sub_hour;
+        input [HOUR_WIDTH-1:0] value;
+        input integer step;
+        integer diff;
+    begin
+        diff = value - step;
+        if (diff < 0) wrap_sub_hour = diff + HOUR_TIMES;
+        else wrap_sub_hour = diff[HOUR_WIDTH-1:0];
+    end
+    endfunction
+
     assign live_msec = i_live_time[MSEC_MSB:MSEC_LSB];
     assign live_sec  = i_live_time[SEC_MSB:SEC_LSB];
     assign live_min  = i_live_time[MIN_MSB:MIN_LSB];
@@ -68,7 +171,7 @@ module time_set_module #(
 
     always @(posedge clk or posedge rst) begin
         if (rst) begin  // reset이면 설정 버스와 set index 초기화
-            set_index_reg  <= UNIT_MSEC;
+            set_index_reg  <= UNIT_HOUR;
             set_mode_d_reg <= 1'b0;
             set_msec_reg   <= 0;
             set_sec_reg    <= 0;
@@ -107,26 +210,25 @@ module time_set_module #(
             set_hour_next  = live_hour;
         end else if (i_index_shift) begin
             // INDEX_SHIFT 상태에서 현재 편집 단위를 다음 단위로 이동함.
-            set_index_next = set_index_reg + 1'b1;
+            set_index_next = next_unit(set_index_reg);
         end else if (i_increment) begin
             // increment 펄스가 들어오면 현재 선택 단위만 1 증가시킴.
             case (set_index_reg)
-                UNIT_MSEC: begin
-                    if (set_msec_reg == MSEC_MAX) set_msec_next = 0;
-                    else set_msec_next = set_msec_reg + 1'b1;
+                UNIT_HOUR: set_hour_next = wrap_add_hour(set_hour_reg, 1);
+                UNIT_MIN:  set_min_next  = wrap_add_min(set_min_reg, 1);
+                UNIT_SEC:  set_sec_next  = wrap_add_sec(set_sec_reg, 1);
+                UNIT_MSEC: set_msec_next = wrap_add_msec(set_msec_reg, 1);
+                default: begin
+                    set_msec_next = set_msec_reg;
                 end
-                UNIT_SEC: begin
-                    if (set_sec_reg == SEC_MAX) set_sec_next = 0;
-                    else set_sec_next = set_sec_reg + 1'b1;
-                end
-                UNIT_MIN: begin
-                    if (set_min_reg == MIN_MAX) set_min_next = 0;
-                    else set_min_next = set_min_reg + 1'b1;
-                end
-                UNIT_HOUR: begin
-                    if (set_hour_reg == HOUR_MAX) set_hour_next = 0;
-                    else set_hour_next = set_hour_reg + 1'b1;
-                end
+            endcase
+        end else if (i_increment_tens) begin
+            // hold increment 펄스가 들어오면 현재 선택 단위만 10 증가시킴.
+            case (set_index_reg)
+                UNIT_HOUR: set_hour_next = wrap_add_hour(set_hour_reg, TENS_STEP);
+                UNIT_MIN:  set_min_next  = wrap_add_min(set_min_reg, TENS_STEP);
+                UNIT_SEC:  set_sec_next  = wrap_add_sec(set_sec_reg, TENS_STEP);
+                UNIT_MSEC: set_msec_next = wrap_add_msec(set_msec_reg, TENS_STEP);
                 default: begin
                     set_msec_next = set_msec_reg;
                 end
@@ -134,22 +236,21 @@ module time_set_module #(
         end else if (i_decrement) begin
             // decrement 펄스가 들어오면 현재 선택 단위만 1 감소시킴.
             case (set_index_reg)
-                UNIT_MSEC: begin
-                    if (set_msec_reg == 0) set_msec_next = MSEC_MAX;
-                    else set_msec_next = set_msec_reg - 1'b1;
+                UNIT_HOUR: set_hour_next = wrap_sub_hour(set_hour_reg, 1);
+                UNIT_MIN:  set_min_next  = wrap_sub_min(set_min_reg, 1);
+                UNIT_SEC:  set_sec_next  = wrap_sub_sec(set_sec_reg, 1);
+                UNIT_MSEC: set_msec_next = wrap_sub_msec(set_msec_reg, 1);
+                default: begin
+                    set_msec_next = set_msec_reg;
                 end
-                UNIT_SEC: begin
-                    if (set_sec_reg == 0) set_sec_next = SEC_MAX;
-                    else set_sec_next = set_sec_reg - 1'b1;
-                end
-                UNIT_MIN: begin
-                    if (set_min_reg == 0) set_min_next = MIN_MAX;
-                    else set_min_next = set_min_reg - 1'b1;
-                end
-                UNIT_HOUR: begin
-                    if (set_hour_reg == 0) set_hour_next = HOUR_MAX;
-                    else set_hour_next = set_hour_reg - 1'b1;
-                end
+            endcase
+        end else if (i_decrement_tens) begin
+            // hold decrement 펄스가 들어오면 현재 선택 단위만 10 감소시킴.
+            case (set_index_reg)
+                UNIT_HOUR: set_hour_next = wrap_sub_hour(set_hour_reg, TENS_STEP);
+                UNIT_MIN:  set_min_next  = wrap_sub_min(set_min_reg, TENS_STEP);
+                UNIT_SEC:  set_sec_next  = wrap_sub_sec(set_sec_reg, TENS_STEP);
+                UNIT_MSEC: set_msec_next = wrap_sub_msec(set_msec_reg, TENS_STEP);
                 default: begin
                     set_msec_next = set_msec_reg;
                 end

@@ -11,9 +11,9 @@
       </db_ref>
    </db_ref_list>
    <zoom_setting>
-      <ZoomStartTime time="0fs"></ZoomStartTime>
-      <ZoomEndTime time="395396fs"></ZoomEndTime>
-      <Cursor1Time time="0fs"></Cursor1Time>
+      <ZoomStartTime time="25000"></ZoomStartTime>
+      <ZoomEndTime time="495000"></ZoomEndTime>
+      <Cursor1Time time="30000"></Cursor1Time>
    </zoom_setting>
    <column_width_setting>
       <NameColumnWidth column_width="162"></NameColumnWidth>
@@ -22,14 +22,15 @@
    <WVObjectSize size="5" />
    <wave_markers>
       <marker label="RESET_OFF" time="30000" />
-      <marker label="LIVE_TRACK" time="55000" />
-      <marker label="SET_ENTER" time="65000" />
-      <marker label="SET_HOLD" time="75000" />
-      <marker label="SEC_EDIT_DONE" time="115000" />
-      <marker label="MIN_WRAP_DONE" time="155000" />
-      <marker label="HOUR_WRAP_DONE" time="215000" />
-      <marker label="MSEC_WRAP_START" time="275000" />
-      <marker label="DONE" time="320000" />
+      <marker label="LIVE_TRACK_DONE" time="50000" />
+      <marker label="SET_ENTER_DONE" time="70000" />
+      <marker label="SEC_PLUS_MINUS_DONE" time="110000" />
+      <marker label="SEC_TENS_DONE" time="150000" />
+      <marker label="MIN_EDIT_DONE" time="200000" />
+      <marker label="MIN_WRAP_DONE" time="260000" />
+      <marker label="HOUR_WRAP_DONE" time="320000" />
+      <marker label="MSEC_WRAP_DONE" time="380000" />
+      <marker label="TENS_WRAP_DONE" time="490000" />
    </wave_markers>
    <wvobject type="logic" fp_name="/tb_time_set/clk">
       <obj_property name="ElementShortName">clk</obj_property>
@@ -84,9 +85,21 @@
          <obj_property name="CustomSignalColor">#00FFFF</obj_property>
          <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
+      <wvobject type="logic" fp_name="/tb_time_set/i_increment_tens">
+         <obj_property name="ElementShortName">i_increment_tens</obj_property>
+         <obj_property name="ObjectShortName">i_increment_tens</obj_property>
+         <obj_property name="CustomSignalColor">#00FFFF</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
       <wvobject type="logic" fp_name="/tb_time_set/i_decrement">
          <obj_property name="ElementShortName">i_decrement</obj_property>
          <obj_property name="ObjectShortName">i_decrement</obj_property>
+         <obj_property name="CustomSignalColor">#FF0080</obj_property>
+         <obj_property name="UseCustomSignalColor">true</obj_property>
+      </wvobject>
+      <wvobject type="logic" fp_name="/tb_time_set/i_decrement_tens">
+         <obj_property name="ElementShortName">i_decrement_tens</obj_property>
+         <obj_property name="ObjectShortName">i_decrement_tens</obj_property>
          <obj_property name="CustomSignalColor">#FF0080</obj_property>
          <obj_property name="UseCustomSignalColor">true</obj_property>
       </wvobject>
